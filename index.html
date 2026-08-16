@@ -2485,7 +2485,7 @@
         const syncRuntime = doc.createElement("script");
         syncRuntime.id = "cause-list-firebase-sync-runtime";
         syncRuntime.defer = true;
-        syncRuntime.src = "firebase-sync.js";
+        syncRuntime.src = "firebase-sync.js?v=4";
         (doc.body || doc.documentElement).appendChild(syncRuntime);
       }
 
@@ -3244,6 +3244,6 @@
     })();
   </script>
   <script id="nepali-proofreader-engine-runtime" src="nepali-proofreader-engine.js"></script>
-  <script id="cause-list-firebase-sync-runtime" defer src="firebase-sync.js"></script>
+  <script id="cause-list-firebase-sync-runtime" defer src="firebase-sync.js?v=4"></script>
 </body>
 </html>
