@@ -1367,6 +1367,12 @@
         prompt.value = "";
         prompt.textContent = monthKeys.length ? "महिना रोज्नुहोस्" : "फाइल स्वतः खोज्नुहोस्";
         causeMonthSelect.appendChild(prompt);
+        if (monthKeys.length) {
+          const allOption = document.createElement("option");
+          allOption.value = "all";
+          allOption.textContent = "ALL — सबै उपलब्ध मिति";
+          causeMonthSelect.appendChild(allOption);
+        }
         monthKeys.forEach((monthKey) => {
           const option = document.createElement("option");
           option.value = monthKey;
@@ -1374,7 +1380,7 @@
           causeMonthSelect.appendChild(option);
         });
         causeMonthSelect.disabled = !monthKeys.length;
-        if (monthKeys.includes(previousMonth)) causeMonthSelect.value = previousMonth;
+        if (previousMonth === "all" || monthKeys.includes(previousMonth)) causeMonthSelect.value = previousMonth;
         scanCauseFolder.textContent = causeListDirectoryHandle
           ? "✓ Folder auto-sync"
           : (causeListPages.length ? "Folder auto-sync (optional)" : "फाइल स्वतः खोज्नुहोस्");
@@ -2065,7 +2071,8 @@
       }
 
       function updateRibbonDates() {
-        const dates = pagesForMonth(causeMonthSelect.value);
+        const selectedMonth = causeMonthSelect.value;
+        const dates = selectedMonth === "all" ? causeListPages.slice() : pagesForMonth(selectedMonth);
         causeRibbonDateSelect.replaceChildren();
         const prompt = document.createElement("option");
         prompt.value = "";
@@ -2074,8 +2081,10 @@
         if (dates.length) {
           const allOption = document.createElement("option");
           const files = dates.map((item) => item.dateKey).join(",");
-          allOption.value = "month.html?month=" + encodeURIComponent(causeMonthSelect.value) + "&files=" + encodeURIComponent(files);
-          allOption.textContent = "ALL — महिनाका सबै पेशी सूची";
+          allOption.value = "month.html?month=" + encodeURIComponent(selectedMonth) + "&files=" + encodeURIComponent(files);
+          allOption.textContent = selectedMonth === "all"
+            ? "ALL — सबै उपलब्ध पेशी सूची"
+            : "ALL — महिनाका सबै पेशी सूची";
           causeRibbonDateSelect.appendChild(allOption);
         }
         dates.forEach((item) => {
@@ -3143,7 +3152,12 @@
           loadCauseListByDate();
         }
       });
-      causeMonthSelect.addEventListener("change", updateRibbonDates);
+      causeMonthSelect.addEventListener("change", () => {
+        updateRibbonDates();
+        if (causeMonthSelect.value === "all" && causeRibbonDateSelect.options[1]) {
+          window.location.href = causeRibbonDateSelect.options[1].value;
+        }
+      });
       causeRibbonDateSelect.addEventListener("change", openRibbonCauseList);
       scanCauseFolder.addEventListener("click", chooseCauseListFolder);
       causeFolderInput.addEventListener("change", () => scanSelectedFolder(causeFolderInput.files));

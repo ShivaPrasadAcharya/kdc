@@ -103,25 +103,30 @@
     });
     const months = Array.from(new Set(pages.map((page) => page.month))).sort();
     monthSelect.replaceChildren(new Option("महिना रोज्नुहोस्", ""));
+    if (months.length) monthSelect.add(new Option("ALL — सबै उपलब्ध मिति", "all"));
     months.forEach((month) => monthSelect.add(new Option(monthLabel(month), month)));
     monthSelect.disabled = !months.length;
     function updateDates() {
       const month = monthSelect.value;
       dateSelect.replaceChildren(new Option(month ? "मिति रोज्नुहोस्" : "पहिला महिना रोज्नुहोस्", ""));
       if (month) {
-        const monthPages = pages.filter((page) => page.month === month);
+        const monthPages = month === "all" ? pages : pages.filter((page) => page.month === month);
         const fileList = monthPages.map((page) => page.href).join(",");
-        dateSelect.add(new Option("ALL — सबै मिति", "month.html?month=" + month + "&files=" + encodeURIComponent(fileList)));
+        const allLabel = month === "all" ? "ALL — सबै उपलब्ध पेशी सूची" : "ALL — सबै मिति";
+        dateSelect.add(new Option(allLabel, "month.html?month=" + month + "&files=" + encodeURIComponent(fileList)));
         monthPages.forEach((page) => dateSelect.add(new Option(page.label, page.href)));
       }
       dateSelect.disabled = !month;
     }
-    monthSelect.addEventListener("change", updateDates);
+    monthSelect.addEventListener("change", () => {
+      updateDates();
+      if (monthSelect.value === "all" && dateSelect.options[1]) location.href = dateSelect.options[1].value;
+    });
     dateSelect.addEventListener("change", () => {
       if (dateSelect.value) location.href = dateSelect.value;
     });
-    const requestedMonth = current ? current.month : String(params.get("month") || "");
-    if (months.includes(requestedMonth)) {
+    const requestedMonth = current ? current.month : String(params.get("month") || "").toLowerCase();
+    if (requestedMonth === "all" || months.includes(requestedMonth)) {
       monthSelect.value = requestedMonth;
       updateDates();
       if (current) dateSelect.value = current.href;
