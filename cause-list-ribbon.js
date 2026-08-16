@@ -313,7 +313,21 @@
     return nepali(key.slice(0, 4) + "।" + key.slice(4, 6)) +
       (MONTH_NAMES[number - 1] ? " — " + MONTH_NAMES[number - 1] : "");
   }
+  function isEmbeddedUnderRibbonPage() {
+    if (window.self === window.top) return false;
+    try {
+      let current = window;
+      while (current !== current.top) {
+        const parentWindow = current.parent;
+        if (/(?:^|\/)month\.html?$/i.test(parentWindow.location.pathname)) return true;
+        if (parentWindow.document.querySelector(".page-ribbon,#causePersistentRibbon")) return true;
+        current = parentWindow;
+      }
+    } catch (error) {}
+    return false;
+  }
   function createRibbon() {
+    if (isEmbeddedUnderRibbonPage()) return null;
     if (document.querySelector(".page-ribbon,#causePersistentRibbon")) return null;
     const nav = document.createElement("nav");
     nav.id = "causePersistentRibbon";
