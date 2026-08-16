@@ -136,6 +136,8 @@
       cursor: pointer;
     }
 
+    .normalizer-toggle[hidden] { display: none !important; }
+
     .normalizer-toggle input {
       width: 16px;
       height: 16px;
@@ -852,6 +854,10 @@
           <input type="checkbox" id="smartSearchToggle">
           <span>स्मार्ट सर्च</span>
         </label>
+        <label class="normalizer-toggle" id="activeRowFilterLabel" hidden title="Active webpage मा मिलेका table rows मात्र देखाउनुहोस्">
+          <input type="checkbox" id="activeRowFilterToggle" disabled>
+          <span>Matched rows</span>
+        </label>
         <button type="submit" class="advanced-search-btn" id="advancedSearchBtn">खोज्नुहोस्</button>
         <button type="button" class="advanced-search-clear" id="advancedSearchClear" aria-label="खोज नतिजा बन्द गर्नुहोस्" title="खोज नतिजा बन्द गर्नुहोस्">×</button>
       </form>
@@ -1019,6 +1025,7 @@
     </div>
   </div>
 
+  <script src="cause-list-ribbon.js?v=active-search-1"></script>
   <script>
     (() => {
       "use strict";
@@ -1162,12 +1169,20 @@
       const advancedSearchClear = document.getElementById("advancedSearchClear");
       const nepaliNormalizerToggle = document.getElementById("nepaliNormalizerToggle");
       const smartSearchToggle = document.getElementById("smartSearchToggle");
+      const activeRowFilterLabel = document.getElementById("activeRowFilterLabel");
+      const activeRowFilterToggle = document.getElementById("activeRowFilterToggle");
       const advancedSearchResults = document.getElementById("advancedSearchResults");
       const advancedSearchStatus = document.getElementById("advancedSearchStatus");
       const advancedSearchList = document.getElementById("advancedSearchList");
       const inputHistorySelect = document.getElementById("inputHistorySelect");
       const restoreInputHistory = document.getElementById("restoreInputHistory");
       const copyBtn = document.getElementById("copyBtn");
+      const activePageSearch = window.CauseListActiveSearch.create({
+        document:document,
+        filterInput:activeRowFilterToggle,
+        filterLabel:activeRowFilterLabel,
+        onResults:showActivePageSearchStats,
+      });
 
       let sourceCode = "";
       let outputCode = "";
@@ -1647,6 +1662,18 @@
         advancedSearchStatus.textContent = message;
       }
 
+      function showActivePageSearchStats(stats) {
+        advancedSearchList.replaceChildren();
+        advancedSearchBtn.disabled = false;
+        let message = stats.matches
+          ? toNepaliDigits(stats.matches) + " वटा text highlight भयो"
+          : stats.rows ? toNepaliDigits(stats.rows) + " वटा matched row भेटियो"
+            : "Active webpage मा नतिजा भेटिएन।";
+        if (stats.rows) message += " · " + toNepaliDigits(stats.rows) + " वटा matched row";
+        if (stats.documents > 1) message += " · current preview सहित";
+        openAdvancedSearchPanel(message);
+      }
+
       function closeAdvancedSearchPanel(clearQuery) {
         advancedSearchRunId += 1;
         pendingAdvancedSearch = "";
@@ -1655,6 +1682,7 @@
         advancedSearchList.replaceChildren();
         advancedSearchStatus.textContent = "";
         advancedSearchBtn.disabled = false;
+        activePageSearch.clear();
         if (clearQuery) advancedSearchInput.value = "";
       }
 
@@ -2020,54 +2048,29 @@
         const query = cleanText(value === undefined ? advancedSearchInput.value : value);
         advancedSearchInput.value = query;
         if (!query) {
+          if (!smartMode) activePageSearch.clear();
           openAdvancedSearchPanel(smartMode
             ? "Attachment content खोज्न शब्द लेख्नुहोस्।"
             : "खोज्न नाम, मुद्दा नं., पक्ष वा विषय लेख्नुहोस्।");
           advancedSearchInput.focus();
           return;
         }
-        if (!smartMode && !causeListPages.length) {
-          openAdvancedSearchPanel("खोज्न मिल्ने indexYYYYMMDD.html फाइल भेटिएन।");
+        const useNormalizer = nepaliNormalizerToggle.checked;
+        if (!smartMode) {
+          advancedSearchRunId += 1;
+          pendingAdvancedSearch = "";
+          advancedSearchCache = new Map();
+          advancedSearchList.replaceChildren();
+          activePageSearch.search(query, useNormalizer);
           return;
         }
         if (!await ensureAdvancedSearchAccess(query)) return;
 
         const runId = ++advancedSearchRunId;
-        const useNormalizer = nepaliNormalizerToggle.checked;
-        const pages = causeListPages.slice().sort((a, b) => a.dateKey.localeCompare(b.dateKey));
-        const matches = [];
-        let failedPages = 0;
-        let completedPages = 0;
         advancedSearchCache = new Map();
         advancedSearchList.replaceChildren();
         advancedSearchBtn.disabled = true;
-        if (smartMode) {
-          await runSmartAttachmentSearch(query, useNormalizer, runId);
-          return;
-        }
-        openAdvancedSearchPanel("खोजिँदैछ… ०/" + toNepaliDigits(pages.length));
-
-        const queue = pages.slice();
-        async function worker() {
-          while (queue.length && runId === advancedSearchRunId) {
-            const item = queue.shift();
-            try {
-              const source = await readCauseListPage(item);
-              matches.push(...searchCauseListSource(item, source, query, useNormalizer));
-            } catch (error) {
-              failedPages += 1;
-            }
-            completedPages += 1;
-            advancedSearchStatus.textContent = "खोजिँदैछ… " + toNepaliDigits(completedPages) + "/" + toNepaliDigits(pages.length);
-          }
-        }
-
-        const workers = Array.from({length:Math.min(4, pages.length)}, () => worker());
-        await Promise.all(workers);
-        if (runId !== advancedSearchRunId) return;
-        matches.sort((a, b) => a.item.dateKey.localeCompare(b.item.dateKey) || a.rowIndex - b.rowIndex);
-        advancedSearchBtn.disabled = false;
-        renderAdvancedSearchResults(matches, failedPages, pages.length);
+        await runSmartAttachmentSearch(query, useNormalizer, runId);
       }
 
       function updateRibbonDates() {
@@ -2118,13 +2121,13 @@
           '\x3Ciframe title="' + escapeAttribute(item.label) + ' को पेशी सूची" src="' + escapeAttribute(item.href) + '">\x3C/iframe>\x3C/section>'
         ).join("");
         return '\x3C!doctype html>\x3Chtml lang="ne">\x3Chead>\x3Cmeta charset="utf-8">\x3Cmeta name="viewport" content="width=device-width,initial-scale=1">' +
-          '\x3Ctitle>' + escapeAttribute(monthLabel) + ' — सबै पेशी सूची\x3C/title>\x3Clink rel="stylesheet" href="cause-list-ribbon.css">\x3Cstyle>' +
+          '\x3Ctitle>' + escapeAttribute(monthLabel) + ' — सबै पेशी सूची\x3C/title>\x3Clink rel="stylesheet" href="cause-list-ribbon.css?v=active-search-1">\x3Cstyle>' +
           'html{color:#2f2724;background:#f4efe8;font-family:"Noto Sans Devanagari","Nirmala UI",sans-serif}body{margin:0;padding:18px}' +
           'header{position:relative;z-index:5;margin:-18px -18px 18px;padding:14px 20px;color:#fff;background:#5f1723;border-bottom:3px solid #c59132}' +
           'header h1{margin:0;font-size:1.12rem}.month-item{margin:0 0 22px;padding:12px;background:#fff;border:1px solid #d5cabe;border-radius:12px;box-shadow:0 8px 24px rgba(56,35,30,.08)}' +
           '.month-item h2{margin:0 0 10px;color:#6d1a27;font-size:1rem}.month-item iframe{display:block;width:100%;height:1450px;border:1px solid #d5cabe;border-radius:8px;background:#fff}' +
           '@media(max-width:700px){body{padding:8px}header{margin:-8px -8px 12px}.month-item{padding:7px}.month-item iframe{height:1100px}}' +
-          '\x3C/style>\x3C/head>\x3Cbody>\x3Cheader>\x3Ch1>' + escapeAttribute(monthLabel) + ' — सबै उपलब्ध पेशी सूची\x3C/h1>\x3C/header>' + sections + '\x3Cscript src="cause-list-ribbon.js">\x3C/script>\x3C/body>\x3C/html>';
+          '\x3C/style>\x3C/head>\x3Cbody>\x3Cheader>\x3Ch1>' + escapeAttribute(monthLabel) + ' — सबै उपलब्ध पेशी सूची\x3C/h1>\x3C/header>' + sections + '\x3Cscript src="cause-list-ribbon.js?v=active-search-1">\x3C/script>\x3C/body>\x3C/html>';
       }
 
       function renderMonthlyPreview(outputs) {
@@ -2446,7 +2449,7 @@
         const ribbonStyle = doc.createElement("link");
         ribbonStyle.id = "cause-list-ribbon-style";
         ribbonStyle.rel = "stylesheet";
-        ribbonStyle.href = "cause-list-ribbon.css";
+        ribbonStyle.href = "cause-list-ribbon.css?v=active-search-1";
         head.appendChild(ribbonStyle);
         const style = doc.createElement("link");
         style.id = "court-order-builder-style";
@@ -2467,7 +2470,7 @@
         (doc.body || doc.documentElement).appendChild(configNode);
         const ribbonRuntime = doc.createElement("script");
         ribbonRuntime.id = "cause-list-ribbon-runtime";
-        ribbonRuntime.src = "cause-list-ribbon.js";
+        ribbonRuntime.src = "cause-list-ribbon.js?v=active-search-1";
         (doc.body || doc.documentElement).appendChild(ribbonRuntime);
         const dateLibrary = doc.createElement("script");
         dateLibrary.setAttribute("data-cob-nepali-date", "3.4.0");
@@ -3176,7 +3179,12 @@
         advancedSearchInput.placeholder = smartSearchToggle.checked
           ? "Attachment को content खोज्नुहोस्…"
           : "नाम, मुद्दा नं., पक्ष वा विषय खोज्नुहोस्…";
+        if (smartSearchToggle.checked) activePageSearch.clear();
         if (advancedSearchInput.value.trim()) runAdvancedSearch();
+      });
+      advancedSearchInput.addEventListener("input", () => {
+        if (advancedSearchInput.value || smartSearchToggle.checked) return;
+        closeAdvancedSearchPanel(false);
       });
       inputHistorySelect.addEventListener("change", () => {
         restoreInputHistory.disabled = inputHistorySelect.value === "";

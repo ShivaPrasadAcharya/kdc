@@ -76,11 +76,23 @@
   white-space: nowrap;
   cursor: pointer;
 }
+.cpr-check[hidden] { display: none !important; }
 .cpr-check input {
   width: 15px;
   height: 15px;
   margin: 0;
   accent-color: #f6d98e;
+}
+.cpr-filter-check {
+  color: #fff0bd;
+}
+.cpr-search-status {
+  max-width: 112px;
+  overflow: hidden;
+  color: #f4dfab;
+  font: 750 9px/1.25 inherit;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .cpr-nav {
   display: flex;
@@ -132,6 +144,7 @@
   .cpr-search { display: grid; grid-template-columns: minmax(0, 1fr) auto; min-width: 0; width: 100%; }
   .cpr-search input[type="search"] { grid-column: 1 / -1; width: 100%; }
   .cpr-options { min-width: 0; overflow-x: auto; }
+  .cpr-search-status { display: none; }
   .cpr-nav { display: grid; grid-template-columns: auto minmax(0, 1fr); width: 100%; }
   .cpr-link { min-height: 32px; padding: 6px 8px; }
   .cpr-current { display: none; }
