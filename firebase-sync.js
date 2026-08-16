@@ -17,7 +17,7 @@
     ROOM_STORAGE = "cause-list-firebase-room-v1",
     DEVICE_STORAGE = "cause-list-firebase-device-v1",
     NAME_STORAGE = "cause-list-firebase-name-v1",
-    MAX_CONNECTORS = 3,
+    MAX_CONNECTORS = 4,
     PRESENCE_STALE_MS = 2 * 60 * 1000,
     CHAT_RETENTION_MS = 9 * 60 * 60 * 1000,
     CHAT_FILE_MAX_BYTES = 5 * 1024 * 1024,
@@ -225,7 +225,7 @@
             <div class="cfsync-chat-file-pending" hidden><span class="cfsync-chat-file-name"></span><button type="button" class="cfsync-chat-file-clear" aria-label="छानिएको file हटाउनुहोस्" title="Remove attachment">×</button></div>
             <div class="cfsync-chat-compose"><input class="cfsync-chat-file-input" data-firebase-ignore type="file" hidden><button type="button" class="cfsync-chat-attach" aria-label="File attach गर्नुहोस्" title="Attach file"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M16.5 6.5v9a4.5 4.5 0 0 1-9 0V5a3 3 0 0 1 6 0v9.5a1.5 1.5 0 0 1-3 0V6h2v8.5a.5.5 0 0 0 1 0V5a2 2 0 0 0-4 0v10.5a2.5 2.5 0 0 0 5 0v-9h2z"/></svg></button><textarea class="cfsync-chat-input" data-firebase-ignore rows="1" maxlength="1000" placeholder="सन्देश लेख्नुहोस्…" aria-label="Chat message"></textarea><button type="button" class="cfsync-btn cfsync-primary cfsync-chat-send" aria-label="सन्देश पठाउनुहोस्" title="Send"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M3 3.5 22 12 3 20.5l2.1-7 10-1.5-10-1.5-2.1-7z"/></svg></button></div>
           </section>
-          <p class="cfsync-note">एउटै passkey मा अधिकतम ३ connector मात्र जोडिन्छन्। Form, editable preview, submitted history र chat सोही connector समूहमा मात्र साझा हुन्छ।</p>
+          <p class="cfsync-note">एउटै passkey मा अधिकतम ४ connector मात्र जोडिन्छन्। Form, editable preview, submitted history र chat सोही connector समूहमा मात्र साझा हुन्छ।</p>
         </div>
       </div>`;
     document.body.appendChild(root);
@@ -654,7 +654,7 @@
         roomCode = "";
         basePath = "";
         root.dataset.connected = "0";
-        setStatus("यो passkey मा ३ connector पहिले नै सक्रिय छन्।", "error");
+        setStatus("यो passkey मा ४ connector पहिले नै सक्रिय छन्।", "error");
         return false;
       }
       startCoreSubscriptions();
