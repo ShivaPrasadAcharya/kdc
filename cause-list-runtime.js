@@ -981,7 +981,7 @@
               '" class="cob-iti"><span class="cob-iti-text">' +
               s(itiText) +
               '</span><span class="cob-iti-leader" aria-hidden="true"></span></p>';
-          ((A += V("श्री", { align: "center" })),
+          ((A += V("।।श्री।।", { align: "center" })),
             (A += V(t.court || "काठमाडौं जिल्ला अदालत", {
               align: "center",
               bold: !0,
@@ -995,7 +995,8 @@
                 align: "center",
               })),
               (A += V("दायरी मिति- " + (d(T.date) || n), { align: "center" })),
-              (A += V("फैसला मिति- " + (l || n), { align: "center" }))),
+              (A += V("फैसला मिति- " + (l || n), { align: "center" })),
+              (A += V("निर्णय नम्बर-", { align: "center" }))),
             (A += V("", { blank: !0 })),
             (A += X(L, E)),
             (A += V("विरुद्ध", { align: "center", versus: !0 })),
@@ -1023,6 +1024,8 @@
               })),
               (A += V("शाखा अधिकृत-", { align: "left" })),
               (A += V("कम्प्युटर अपरेटर-", { align: "left" })),
+              (A += V("इजलास नम्बर-", { align: "left" })),
+              (A += V("फाँट-", { align: "left" })),
               (A += itiParagraph),
               (A += V("फैसला प्रमाणीकरण मिति-", { align: "left" }))),
             (w.innerHTML = A),
