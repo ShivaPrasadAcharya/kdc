@@ -142,7 +142,7 @@
           b = document.createElement("div");
         ((b.className = "cob-backdrop"),
           (b.innerHTML =
-            '<section class="cob-modal" role="dialog" aria-modal="true" aria-labelledby="cobTitle"><header class="cob-head"><h2 id="cobTitle">नेपाली अदालती आदेश/फैसला</h2><button class="cob-close" type="button" aria-label="बन्द गर्नुहोस्">×</button></header><div class="cob-body"><div class="cob-controls"><div class="cob-field"><label for="cobType">कागजातको प्रकार</label><select id="cobType"><option>आदेश</option><option>अन्तिम आदेश</option><option>फैसला</option></select></div><div class="cob-field"><label for="cobJudge">श्रीमान्</label><select id="cobJudge"></select></div><div class="cob-field cob-wide"><label for="cobPartyStatus">पक्षहरूको हैसियत</label><div class="cob-party-control"><select id="cobPartyStatus"><option value="वादी|प्रतिवादी">वादी, प्रतिवादी</option><option value="निवेदक|विपक्षी">निवेदक, विपक्षी</option><option value="पुनरावेदक|प्रत्यर्थी">पुनरावेदक, प्रत्यर्थी</option><option value="निवेदक/वादी|विपक्षी/प्रतिवादी">निवेदक/वादी, विपक्षी/प्रतिवादी</option><option value="निवेदक/प्रतिवादी|विपक्षी/वादी">निवेदक/प्रतिवादी, विपक्षी/वादी</option><option value="निवेदक/वादी|विपक्षी">निवेदक/वादी, विपक्षी</option><option value="निवेदक/प्रतिवादी|विपक्षी">निवेदक/प्रतिवादी, विपक्षी</option><option value="निवेदक|विपक्षी/वादी">निवेदक, विपक्षी/वादी</option><option value="निवेदक|विपक्षी/प्रतिवादी">निवेदक, विपक्षी/प्रतिवादी</option><option value="पुनरावेदक/वादी|प्रत्यर्थी/प्रतिवादी">पुनरावेदक/वादी, प्रत्यर्थी/प्रतिवादी</option><option value="पुनरावेदक/प्रतिवादी|प्रत्यर्थी/वादी">पुनरावेदक/प्रतिवादी, प्रत्यर्थी/वादी</option></select><button type="button" class="cob-reverse" id="cobReverse" data-active="0" aria-pressed="false"><span>Reverse</span><span class="cob-reverse-mark" id="cobReverseMark" aria-hidden="true">✕</span></button></div></div><div class="cob-summary" id="cobSummary" aria-label="मुद्दाको स्वतः प्राप्त विवरण"></div><div class="cob-field cob-wide"><label for="cobRemarks">कैफियत</label><textarea id="cobRemarks" placeholder="आदेश वा फैसलाको व्यहोरा यहाँ लेख्नुहोस्"></textarea></div></div><p class="cob-note">मुद्दाको विवरण source row बाट स्वतः लिइन्छ। कैफियत मात्र सम्पादनयोग्य content field हो।</p><div class="cob-actions"><button type="button" class="cob-btn cob-primary" id="cobGenerate">मस्यौदा तयार गर्नुहोस्</button><button type="button" class="cob-btn" id="cobTools">Tools</button><button type="button" class="cob-btn" id="cobSave">सुरक्षित गर्नुहोस्</button><button type="button" class="cob-btn" id="cobCopy">Copy</button><button type="button" class="cob-btn" id="cobDocx">Download .docx</button><button type="button" class="cob-btn" id="cobPrint">Print</button><span class="cob-save-status" id="cobSaveStatus" role="status" aria-live="polite"></span></div><aside class="cob-tools-panel" id="cobToolsPanel" aria-label="Preview formatting tools" hidden><div class="cob-tools-head"><strong>Preview Tools</strong><button type="button" class="cob-tools-close" aria-label="Tools बन्द गर्नुहोस्">×</button></div><p class="cob-tools-help">Cursor राख्नुहोस् वा line/paragraph छान्नुहोस्। Ascend/Descend ले bullet नहटाई indent मात्र बदल्छ।</p><div class="cob-tools-grid"><button type="button" data-cob-tool="tab-remove" title="Tab घटाई माथिल्लो indent level मा लैजानुहोस्">← Ascend indent</button><button type="button" data-cob-tool="tab-add" title="Tab थपेर तल्लो indent level मा लैजानुहोस्">Descend indent →</button><button type="button" data-cob-tool="bullet-add">+ Bullet</button><button type="button" data-cob-tool="bullet-remove">− Bullet</button><button type="button" data-cob-tool="subbullet-add">+ Subbullet</button><button type="button" data-cob-tool="subbullet-remove">− Subbullet</button></div><label class="cob-size-control" for="cobFontSize"><span>Text size</span><output id="cobFontSizeValue">13 pt</output><input id="cobFontSize" type="range" min="9" max="24" step="0.5" value="13"></label><p class="cob-tools-status" id="cobToolsStatus" aria-live="polite"></p></aside><div class="cob-draft-wrap" id="cobDraftWrap"><div class="cob-draft" id="cobDraft" contenteditable="true" spellcheck="true" data-cob-font-size="13"></div></div></div></section>'),
+            '<section class="cob-modal" role="dialog" aria-modal="true" aria-labelledby="cobTitle"><header class="cob-head"><h2 id="cobTitle">नेपाली अदालती आदेश/फैसला</h2><button class="cob-close" type="button" aria-label="बन्द गर्नुहोस्">×</button></header><div class="cob-body"><div class="cob-controls"><div class="cob-field"><label for="cobType">कागजातको प्रकार</label><select id="cobType"><option>आदेश</option><option>अन्तिम आदेश</option><option>फैसला</option><option>कसूर_सजाय</option></select></div><div class="cob-field"><label for="cobJudge">श्रीमान्</label><select id="cobJudge"></select></div><div class="cob-field cob-wide"><label for="cobPartyStatus">पक्षहरूको हैसियत</label><div class="cob-party-control"><select id="cobPartyStatus"><option value="वादी|प्रतिवादी">वादी, प्रतिवादी</option><option value="निवेदक|विपक्षी">निवेदक, विपक्षी</option><option value="पुनरावेदक|प्रत्यर्थी">पुनरावेदक, प्रत्यर्थी</option><option value="निवेदक/वादी|विपक्षी/प्रतिवादी">निवेदक/वादी, विपक्षी/प्रतिवादी</option><option value="निवेदक/प्रतिवादी|विपक्षी/वादी">निवेदक/प्रतिवादी, विपक्षी/वादी</option><option value="निवेदक/वादी|विपक्षी">निवेदक/वादी, विपक्षी</option><option value="निवेदक/प्रतिवादी|विपक्षी">निवेदक/प्रतिवादी, विपक्षी</option><option value="निवेदक|विपक्षी/वादी">निवेदक, विपक्षी/वादी</option><option value="निवेदक|विपक्षी/प्रतिवादी">निवेदक, विपक्षी/प्रतिवादी</option><option value="पुनरावेदक/वादी|प्रत्यर्थी/प्रतिवादी">पुनरावेदक/वादी, प्रत्यर्थी/प्रतिवादी</option><option value="पुनरावेदक/प्रतिवादी|प्रत्यर्थी/वादी">पुनरावेदक/प्रतिवादी, प्रत्यर्थी/वादी</option></select><button type="button" class="cob-reverse" id="cobReverse" data-active="0" aria-pressed="false"><span>Reverse</span><span class="cob-reverse-mark" id="cobReverseMark" aria-hidden="true">✕</span></button></div></div><div class="cob-summary" id="cobSummary" aria-label="मुद्दाको स्वतः प्राप्त विवरण"></div><div class="cob-field cob-wide"><label for="cobRemarks">कैफियत</label><textarea id="cobRemarks" placeholder="आदेश वा फैसलाको व्यहोरा यहाँ लेख्नुहोस्"></textarea></div></div><p class="cob-note">मुद्दाको विवरण source row बाट स्वतः लिइन्छ। कैफियत मात्र सम्पादनयोग्य content field हो।</p><div class="cob-actions"><button type="button" class="cob-btn cob-primary" id="cobGenerate">मस्यौदा तयार गर्नुहोस्</button><button type="button" class="cob-btn" id="cobTools">Tools</button><button type="button" class="cob-btn" id="cobSave">सुरक्षित गर्नुहोस्</button><button type="button" class="cob-btn" id="cobCopy">Copy</button><button type="button" class="cob-btn" id="cobDocx">Download .docx</button><button type="button" class="cob-btn" id="cobPrint">Print</button><span class="cob-save-status" id="cobSaveStatus" role="status" aria-live="polite"></span></div><aside class="cob-tools-panel" id="cobToolsPanel" aria-label="Preview formatting tools" hidden><div class="cob-tools-head"><strong>Preview Tools</strong><button type="button" class="cob-tools-close" aria-label="Tools बन्द गर्नुहोस्">×</button></div><p class="cob-tools-help">Cursor राख्नुहोस् वा line/paragraph छान्नुहोस्। Ascend/Descend ले bullet नहटाई indent मात्र बदल्छ।</p><div class="cob-tools-grid"><button type="button" data-cob-tool="tab-remove" title="Tab घटाई माथिल्लो indent level मा लैजानुहोस्">← Ascend indent</button><button type="button" data-cob-tool="tab-add" title="Tab थपेर तल्लो indent level मा लैजानुहोस्">Descend indent →</button><button type="button" data-cob-tool="bullet-add">+ Bullet</button><button type="button" data-cob-tool="bullet-remove">− Bullet</button><button type="button" data-cob-tool="subbullet-add">+ Subbullet</button><button type="button" data-cob-tool="subbullet-remove">− Subbullet</button></div><label class="cob-size-control" for="cobFontSize"><span>Text size</span><output id="cobFontSizeValue">13 pt</output><input id="cobFontSize" type="range" min="9" max="24" step="0.5" value="13"></label><p class="cob-tools-status" id="cobToolsStatus" aria-live="polite"></p></aside><div class="cob-draft-wrap" id="cobDraftWrap"><div class="cob-draft" id="cobDraft" contenteditable="true" spellcheck="true" data-cob-font-size="13"></div></div></div></section>'),
           document.body.appendChild(b));
         const w = b.querySelector("#cobDraft"),
           h = b.querySelector("#cobRemarks"),
@@ -936,7 +936,8 @@
           const a = m(T.rawCase),
             o = f(a.caseNo),
             c = g.value || "आदेश",
-            i = "फैसला" === c,
+            isCrimeSentence = "कसूर_सजाय" === c,
+            i = "फैसला" === c || isCrimeSentence,
             l = d(t.causeDate),
             u = o ? "निवेदन नम्बर-" : "मुद्दा नम्बर-",
             h = y.value || t.selectedJudge || "शिवप्रसाद आचार्य",
@@ -995,17 +996,28 @@
                 align: "center",
               })),
               (A += V("दायरी मिति- " + (d(T.date) || n), { align: "center" })),
-              (A += V("फैसला मिति- " + (l || n), { align: "center" })),
-              (A += V("निर्णय नम्बर-", { align: "center" }))),
-            (A += V("", { blank: !0 })),
-            (A += X(L, E)),
-            (A += V("विरुद्ध", { align: "center", versus: !0 })),
-            (A += X(N, k)),
+              isCrimeSentence
+                ? ((A += V("कसूर ठहर मिति- " + (l || n), {
+                    align: "center",
+                  })),
+                  (A += V("सजाय निर्धारण मिति- " + (l || n), {
+                    align: "center",
+                  })),
+                  (A += V("कसूर ठहर निर्णय नम्बर-", { align: "center" })),
+                  (A += V("सजाय निर्धारण निर्णय नम्बर-", {
+                    align: "center",
+                  })))
+                : ((A += V("फैसला मिति- " + (l || n), { align: "center" })),
+                  (A += V("निर्णय नम्बर-", { align: "center" })))),
             (A += V((o ? "विषय- " : "मुद्दा- ") + (T.subject || n), {
               align: "center",
               bold: !0,
               underline: !0,
             })),
+            (A += V("", { blank: !0 })),
+            (A += X(L, E)),
+            (A += V("विरुद्ध", { align: "center", versus: !0 })),
+            (A += X(N, k)),
             (A += V("", { blank: !0 })),
             (A +=
               '<div class="cob-main-body" data-cob-main-body="1">' +
