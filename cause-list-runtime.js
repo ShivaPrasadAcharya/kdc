@@ -982,33 +982,57 @@
               '" class="cob-iti"><span class="cob-iti-text">' +
               s(itiText) +
               '</span><span class="cob-iti-leader" aria-hidden="true"></span></p>';
-          ((A += V("।।श्री।।", { align: "center" })),
+          ((A += V("।।श्री।।", { align: "center", bold: !0 })),
             (A += V(t.court || "काठमाडौं जिल्ला अदालत", {
               align: "center",
               bold: !0,
             })),
-            (A += V("इजलास", { align: "center" })),
-            (A += V("माननीय न्यायाधीश श्री " + h, { align: "center" })),
-            (A += V(c, { align: "center", underline: !0, title: !0 })),
-            (A += V(u + a.caseNo, { align: "center", bold: !i })),
+            (A += V("इजलास", { align: "center", bold: !0 })),
+            (A += V("माननीय न्यायाधीश श्री " + h, {
+              align: "center",
+              bold: !0,
+            })),
+            (A += V(c, {
+              align: "center",
+              bold: !0,
+              underline: !0,
+              title: !0,
+            })),
+            (A += V(u + a.caseNo, { align: "center", bold: !0 })),
             i &&
               ((A += V("रजिष्ट्रेशन नम्बर- " + a.registrationNo, {
                 align: "center",
+                bold: !0,
               })),
-              (A += V("दायरी मिति- " + (d(T.date) || n), { align: "center" })),
+              (A += V("दायरी मिति- " + (d(T.date) || n), {
+                align: "center",
+                bold: !0,
+              })),
               isCrimeSentence
                 ? ((A += V("कसूर ठहर मिति- " + (l || n), {
                     align: "center",
+                    bold: !0,
                   })),
                   (A += V("सजाय निर्धारण मिति- " + (l || n), {
                     align: "center",
+                    bold: !0,
                   })),
-                  (A += V("कसूर ठहर निर्णय नम्बर-", { align: "center" })),
+                  (A += V("कसूर ठहर निर्णय नम्बर-", {
+                    align: "center",
+                    bold: !0,
+                  })),
                   (A += V("सजाय निर्धारण निर्णय नम्बर-", {
                     align: "center",
+                    bold: !0,
                   })))
-                : ((A += V("फैसला मिति- " + (l || n), { align: "center" })),
-                  (A += V("निर्णय नम्बर-", { align: "center" })))),
+                : ((A += V("फैसला मिति- " + (l || n), {
+                    align: "center",
+                    bold: !0,
+                  })),
+                  (A += V("निर्णय नम्बर-", {
+                    align: "center",
+                    bold: !0,
+                  })))),
             (A += V((o ? "विषय- " : "मुद्दा- ") + (T.subject || n), {
               align: "center",
               bold: !0,
