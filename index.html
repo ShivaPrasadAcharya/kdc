@@ -2907,12 +2907,18 @@
         let explicitlyFilteredTables = 0;
         let fullyIncludedTables = 0;
         let excludedTables = 0;
+        let excludedBenchHeaders = 0;
         const unmatchedRowSerials = [];
         const defaultModeTables = new Set();
-        targetCauseListTables(parsed, false).forEach((entry, index) => {
+        const targetTableEntries = targetCauseListTables(parsed, false);
+        const allMinusGroups = new Set();
+        targetTableEntries.forEach((entry, index) => {
           const selection = rowFilterSelection(entry.key);
           if (selection.mode === "ALL-") {
+            allMinusGroups.add(entry.table.dataset.cobBenchGroup || "");
+            const afterTable = entry.table.nextElementSibling;
             entry.table.remove();
+            if (afterTable && afterTable.tagName === "BR") afterTable.remove();
             excludedTables += 1;
             return;
           }
@@ -2941,6 +2947,25 @@
           const missing = Array.from(requested).filter((serial) => !matched.has(serial));
           if (missing.length)
             unmatchedRowSerials.push(`Table ${index + 1}: ${missing.join(", ")}`);
+        });
+
+        // ALL- ले समूहका सबै causelist tables हटाएको अवस्थामा इजलास/न्यायाधीश header पनि हटाइन्छ।
+        allMinusGroups.forEach((group) => {
+          if (!group) return;
+          const hasRemainingTable = targetTableEntries.some((entry) =>
+            entry.table.isConnected && entry.table.dataset.cobBenchGroup === group
+          );
+          if (hasRemainingTable) return;
+          const headerTable = Array.from(parsed.querySelectorAll("table[data-cob-bench-group]")).find((table) => {
+            if (table.dataset.cobBenchGroup !== group) return false;
+            const judge = table.querySelector(".judge, [class*='judge' i]");
+            return judge && isTarget(judge.textContent);
+          });
+          if (!headerTable) return;
+          const afterHeader = headerTable.nextElementSibling;
+          headerTable.remove();
+          if (afterHeader && afterHeader.tagName === "BR") afterHeader.remove();
+          excludedBenchHeaders += 1;
         });
 
         // Default ALL mode मा मात्र अन्तिम disposition column का excluded अवस्था हटाइन्छन्।
@@ -2985,13 +3010,14 @@
 
         return {
           html,
-          retainedBenches: Math.max(retainedBenches, 1),
+          retainedBenches: Math.max(retainedBenches - excludedBenchHeaders, 0),
           removedBenches,
           removedDispositionRows,
           removedRequestedRows,
           explicitlyFilteredTables,
           fullyIncludedTables,
           excludedTables,
+          excludedBenchHeaders,
           unmatchedRowSerials,
           selectedRows,
           causeDate: sourceMeta.causeDate || normalizeBsDate(loadedCauseDateKey)
@@ -3035,7 +3061,7 @@
           if (result.fullyIncludedTables)
             modeNotes.push(`${toNepaliDigits(result.fullyIncludedTables)} table मा ALL+ लागू भयो।`);
           if (result.excludedTables)
-            modeNotes.push(`${toNepaliDigits(result.excludedTables)} table ALL- ले हटाइयो।`);
+            modeNotes.push(`${toNepaliDigits(result.excludedTables)} table ALL- ले हटाइयो${result.excludedBenchHeaders ? `; सम्बन्धित ${toNepaliDigits(result.excludedBenchHeaders)} इजलास/न्यायाधीश header पनि हटाइयो` : ""}।`);
           if (result.explicitlyFilteredTables)
             modeNotes.push(`${toNepaliDigits(result.explicitlyFilteredTables)} table मा Custom लागू गरी ${toNepaliDigits(result.removedRequestedRows)} अन्य row हटाइए।`);
           const rowFilterNote = modeNotes.length
