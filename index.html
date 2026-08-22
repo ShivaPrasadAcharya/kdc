@@ -555,6 +555,25 @@
       margin-top: 14px;
     }
 
+    .output-actions { position: relative; }
+    .output-menu { position: relative; }
+    .output-menu-panel {
+      position: absolute;
+      right: 0;
+      bottom: calc(100% + 8px);
+      z-index: 20;
+      display: grid;
+      gap: 6px;
+      min-width: 190px;
+      padding: 8px;
+      background: #fff;
+      border: 1px solid #d8cdbf;
+      border-radius: 11px;
+      box-shadow: 0 16px 38px rgba(45, 14, 19, .2);
+    }
+    .output-menu-panel[hidden] { display: none; }
+    .output-menu-panel .btn { width: 100%; justify-content: flex-start; white-space: nowrap; }
+
     .btn {
       display: inline-flex;
       align-items: center;
@@ -881,7 +900,8 @@
     <div class="page-ribbon-inner">
       <form class="advanced-search" id="advancedSearchForm" role="search">
         <label class="sr-only" for="advancedSearchInput">सबै पेशी सूचीमा खोज्नुहोस्</label>
-        <input class="advanced-search-input" type="search" id="advancedSearchInput" autocomplete="off" placeholder="नाम, मुद्दा नं., पक्ष वा विषय खोज्नुहोस्…">
+        <input class="advanced-search-input" type="search" id="advancedSearchInput" list="advancedSearchHistory" autocomplete="off" placeholder="नाम, मुद्दा नं., पक्ष वा विषय खोज्नुहोस्…">
+        <datalist id="advancedSearchHistory"></datalist>
         <label class="normalizer-toggle" title="रि/री/ऋ, श/ष/स, व/ब, नासिक्य अक्षर, नेपाली अंक र space लाई मिलाएर खोज्छ">
           <input type="checkbox" id="nepaliNormalizerToggle" checked>
           <span>Nepali normalizer</span>
@@ -1033,15 +1053,20 @@
             </div>
             <label for="sourceOutput" class="hidden">Filtered source code</label>
             <textarea id="sourceOutput" readonly spellcheck="false"></textarea>
-            <div class="actions">
-              <button type="button" class="btn btn-primary" id="copyBtn">Copy to clipboard</button>
-              <button type="button" class="btn" id="downloadHtml">Download .html</button>
-              <button type="button" class="btn" id="downloadTxt">Download .txt</button>
-              <button type="button" class="btn" id="downloadJson">Download .json</button>
-              <button type="button" class="btn" id="previewBtn">Preview</button>
+            <div class="actions output-actions">
+              <button type="button" class="btn btn-primary" id="previewBtn">Preview</button>
+              <div class="output-menu" id="outputMenu">
+                <button type="button" class="btn" id="outputMenuBtn" aria-haspopup="menu" aria-expanded="false" aria-controls="outputMenuPanel">Menu ▾</button>
+                <div class="output-menu-panel" id="outputMenuPanel" role="menu" aria-label="Output actions" hidden>
+                  <button type="button" class="btn" id="copyBtn" role="menuitem">Copy to clipboard</button>
+                  <button type="button" class="btn" id="downloadHtml" role="menuitem">Download .html</button>
+                  <button type="button" class="btn" id="downloadTxt" role="menuitem">Download .txt</button>
+                  <button type="button" class="btn" id="downloadJson" role="menuitem">Download .json</button>
+                </div>
+              </div>
             </div>
-            <iframe id="inlinePreview" class="inline-preview" title="छानिएको मितिको पेशी सूची" sandbox="allow-scripts allow-forms allow-modals allow-downloads allow-popups"></iframe>
-            <div id="monthlyPreview" class="monthly-preview hidden" aria-label="महिनाका सबै पेशी सूची"></div>
+            <iframe id="inlinePreview" class="inline-preview" title="छानिएको मितिको पेशी सूची" sandbox="allow-scripts allow-forms allow-modals allow-downloads allow-popups" hidden aria-hidden="true"></iframe>
+            <div id="monthlyPreview" class="monthly-preview hidden" aria-label="महिनाका सबै पेशी सूची" hidden aria-hidden="true"></div>
           </div>
           <div class="status" id="outputStatus" role="status" aria-live="polite"></div>
         </div>
@@ -1062,7 +1087,7 @@
     </div>
   </div>
 
-  <script src="cause-list-ribbon.js?v=compact-editor-1"></script>
+  <script src="cause-list-ribbon.js?v=search-history-2"></script>
   <script>
     (() => {
       "use strict";
@@ -1202,6 +1227,7 @@
       const causeFolderInput = document.getElementById("causeFolderInput");
       const advancedSearchForm = document.getElementById("advancedSearchForm");
       const advancedSearchInput = document.getElementById("advancedSearchInput");
+      const advancedSearchHistory = window.CauseListSearchHistory.attach(advancedSearchInput, "advancedSearchHistory");
       const advancedSearchBtn = document.getElementById("advancedSearchBtn");
       const advancedSearchClear = document.getElementById("advancedSearchClear");
       const nepaliNormalizerToggle = document.getElementById("nepaliNormalizerToggle");
@@ -1214,6 +1240,9 @@
       const inputHistorySelect = document.getElementById("inputHistorySelect");
       const restoreInputHistory = document.getElementById("restoreInputHistory");
       const copyBtn = document.getElementById("copyBtn");
+      const outputMenu = document.getElementById("outputMenu");
+      const outputMenuBtn = document.getElementById("outputMenuBtn");
+      const outputMenuPanel = document.getElementById("outputMenuPanel");
       const activePageSearch = window.CauseListActiveSearch.create({
         document:document,
         filterInput:activeRowFilterToggle,
@@ -2092,6 +2121,7 @@
           advancedSearchInput.focus();
           return;
         }
+        advancedSearchHistory.add(query);
         const useNormalizer = nepaliNormalizerToggle.checked;
         if (!smartMode) {
           advancedSearchRunId += 1;
@@ -2164,7 +2194,7 @@
           'header h1{margin:0;font-size:1.12rem}.month-item{margin:0 0 22px;padding:12px;background:#fff;border:1px solid #d5cabe;border-radius:12px;box-shadow:0 8px 24px rgba(56,35,30,.08)}' +
           '.month-item h2{margin:0 0 10px;color:#6d1a27;font-size:1rem}.month-item iframe{display:block;width:100%;height:1450px;border:1px solid #d5cabe;border-radius:8px;background:#fff}' +
           '@media(max-width:700px){body{padding:8px}header{margin:-8px -8px 12px}.month-item{padding:7px}.month-item iframe{height:1100px}}' +
-          '\x3C/style>\x3C/head>\x3Cbody>\x3Cheader>\x3Ch1>' + escapeAttribute(monthLabel) + ' — सबै उपलब्ध पेशी सूची\x3C/h1>\x3C/header>' + sections + '\x3Cscript src="cause-list-ribbon.js?v=compact-editor-1">\x3C/script>\x3C/body>\x3C/html>';
+          '\x3C/style>\x3C/head>\x3Cbody>\x3Cheader>\x3Ch1>' + escapeAttribute(monthLabel) + ' — सबै उपलब्ध पेशी सूची\x3C/h1>\x3C/header>' + sections + '\x3Cscript src="cause-list-ribbon.js?v=search-history-2">\x3C/script>\x3C/body>\x3C/html>';
       }
 
       function renderMonthlyPreview(outputs) {
@@ -2208,11 +2238,12 @@
         selectedRowCount.textContent = "ALL";
         outputEmpty.classList.add("hidden");
         outputReady.classList.remove("hidden");
+        setOutputMenu(false);
         renderMonthlyPreview(monthlyOutputs);
         clearBtn.disabled = false;
         inputStatus.textContent = toNepaliDigits(monthlyOutputs.length) + " वटा पेशी सूची खोलिँदैछन्।";
         inputStatus.className = "status success";
-        outputStatus.textContent = "महिनाका सबै उपलब्ध पेशी सूची एकैचोटि देखाइएका छन्। Rows प्राप्त भएपछि Download .json ले सबैको एउटै index.json तयार गर्छ।";
+        outputStatus.textContent = "महिनाका सबै उपलब्ध पेशी सूची तयार छन्। Preview button बाट webpage हेर्न सकिन्छ; Rows प्राप्त भएपछि Menu भित्रको Download .json ले सबैको एउटै index.json तयार गर्छ।";
         outputStatus.className = "status success";
         broadcastRealtimePreview("monthly");
         if (typeof outputReady.scrollIntoView === "function") outputReady.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -2507,7 +2538,7 @@
         (doc.body || doc.documentElement).appendChild(configNode);
         const ribbonRuntime = doc.createElement("script");
         ribbonRuntime.id = "cause-list-ribbon-runtime";
-        ribbonRuntime.src = "cause-list-ribbon.js?v=compact-editor-1";
+        ribbonRuntime.src = "cause-list-ribbon.js?v=search-history-2";
         (doc.body || doc.documentElement).appendChild(ribbonRuntime);
         const dateLibrary = doc.createElement("script");
         dateLibrary.setAttribute("data-cob-nepali-date", "3.4.0");
@@ -2929,6 +2960,7 @@
           selectedRowCount.textContent = toNepaliDigits(result.selectedRows);
           outputEmpty.classList.add("hidden");
           outputReady.classList.remove("hidden");
+          setOutputMenu(false);
           inlinePreview.srcdoc = outputCode;
           const dispositionNote = result.removedDispositionRows
             ? ` ‘हेर्न नभ्याइने’ वा ‘स्थगित’ भएका ${toNepaliDigits(result.removedDispositionRows)} मुद्दा हटाइए।`
@@ -2961,6 +2993,15 @@
         clearTimeout(copyResetTimer);
         copyBtn.textContent = "Copy to clipboard";
         copyBtn.classList.remove("is-copied");
+      }
+
+      function setOutputMenu(open, focusFirst = false) {
+        outputMenuPanel.hidden = !open;
+        outputMenuBtn.setAttribute("aria-expanded", String(open));
+        if (open && focusFirst) {
+          const firstItem = outputMenuPanel.querySelector('[role="menuitem"]');
+          if (firstItem) firstItem.focus();
+        }
       }
 
       async function copyOutput() {
@@ -3134,6 +3175,7 @@
         rowFilterToggle.disabled = true;
         clearBtn.disabled = true;
         outputReady.classList.add("hidden");
+        setOutputMenu(false);
         outputEmpty.classList.remove("hidden");
         inputStatus.textContent = "HTML वा TXT फाइल छान्नुहोस्, अथवा code paste गर्नुहोस्।";
         inputStatus.className = "status";
@@ -3237,6 +3279,16 @@
       document.getElementById("downloadTxt").addEventListener("click", () => download("txt", "text/plain"));
       document.getElementById("downloadJson").addEventListener("click", downloadIndexJson);
       document.getElementById("previewBtn").addEventListener("click", previewOutput);
+      outputMenuBtn.addEventListener("click", () => {
+        const open = outputMenuPanel.hidden;
+        setOutputMenu(open, open);
+      });
+      outputMenuPanel.addEventListener("click", (event) => {
+        if (event.target.closest('[role="menuitem"]')) setOutputMenu(false);
+      });
+      document.addEventListener("click", (event) => {
+        if (!outputMenuPanel.hidden && !outputMenu.contains(event.target)) setOutputMenu(false);
+      });
 
       ["dragenter", "dragover"].forEach((eventName) => {
         dropZone.addEventListener(eventName, (event) => {
@@ -3255,6 +3307,11 @@
       dropZone.addEventListener("drop", (event) => readFile(event.dataTransfer.files[0]));
 
       document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && !outputMenuPanel.hidden) {
+          setOutputMenu(false);
+          outputMenuBtn.focus();
+          return;
+        }
         if (event.key === "Escape" && missingDialog.classList.contains("is-open")) {
           closeMissingCauseList();
           return;

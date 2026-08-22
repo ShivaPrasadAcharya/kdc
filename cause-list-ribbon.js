@@ -111,6 +111,7 @@
           seen.add(doc);
           documents.push(doc);
           Array.from(doc.querySelectorAll("iframe")).forEach((frame) => {
+            if (frame.hidden || frame.closest('[hidden],[aria-hidden="true"]')) return;
             if (!boundFrames.has(frame)) {
               boundFrames.add(frame);
               frame.addEventListener("load", queueRerun);
@@ -256,6 +257,55 @@
 
     window.CauseListActiveSearch = {create:createActivePageSearch, findMatches};
   }
+  if (!window.CauseListSearchHistory) {
+    const SEARCH_HISTORY_KEY = "cause-list-search-history-v1";
+
+    function readSearchHistory() {
+      try {
+        const stored = JSON.parse(localStorage.getItem(SEARCH_HISTORY_KEY) || "[]");
+        return Array.isArray(stored)
+          ? stored.map((item) => String(item || "").trim()).filter(Boolean).slice(0, 3)
+          : [];
+      } catch (error) {
+        return [];
+      }
+    }
+
+    function saveSearchQuery(value) {
+      const query = String(value || "").trim();
+      if (!query) return readSearchHistory();
+      const history = [query, ...readSearchHistory().filter((item) => item !== query)].slice(0, 3);
+      try { localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(history)); } catch (error) {}
+      return history;
+    }
+
+    function attachSearchHistory(input, listId) {
+      if (!input) return {add:saveSearchQuery, render:function () {}};
+      let list = document.getElementById(listId);
+      if (!list) {
+        list = document.createElement("datalist");
+        list.id = listId;
+        (document.body || document.documentElement).appendChild(list);
+      }
+      input.setAttribute("list", listId);
+      function render() {
+        list.replaceChildren();
+        readSearchHistory().forEach((query) => list.appendChild(new Option(query)));
+      }
+      function add(query) {
+        const history = saveSearchQuery(query);
+        list.replaceChildren();
+        history.forEach((item) => list.appendChild(new Option(item)));
+      }
+      window.addEventListener("storage", (event) => {
+        if (event.key === SEARCH_HISTORY_KEY) render();
+      });
+      render();
+      return {add, render};
+    }
+
+    window.CauseListSearchHistory = {read:readSearchHistory, save:saveSearchQuery, attach:attachSearchHistory};
+  }
   if (window.CauseListPersistentRibbon) return;
   const CACHE_KEY = "cause-list-auto-files-v1";
   const FALLBACK_FILES = ["index20830212.html", "index20830415.html"];
@@ -362,6 +412,7 @@
       dateSelect = nav.querySelector("#cprDate"),
       current = parsePage(location.pathname),
       params = new URLSearchParams(location.search);
+    const searchHistory = window.CauseListSearchHistory.attach(search, "cprSearchHistory");
     search.value = params.get("search") || "";
     normalizer.checked = params.get("normalizer") !== "0";
     smart.checked = params.get("smart") === "1";
@@ -385,6 +436,7 @@
         search.focus();
         return;
       }
+      searchHistory.add(query);
       if (!smart.checked) {
         activeSearch.search(query, normalizer.checked);
         return;
