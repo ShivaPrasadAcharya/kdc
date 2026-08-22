@@ -687,7 +687,7 @@
     .row-filter-list { display: grid; gap: 8px; }
     .row-filter-item {
       display: grid;
-      grid-template-columns: minmax(150px, .72fr) minmax(180px, 1fr);
+      grid-template-columns: minmax(150px, .72fr) minmax(105px, .42fr) minmax(180px, 1fr);
       gap: 6px 10px;
       align-items: center;
       padding: 9px 10px;
@@ -696,6 +696,7 @@
       border-radius: 9px;
     }
     .row-filter-item label { color: #443538; font-size: .79rem; font-weight: 850; }
+    .row-filter-item select,
     .row-filter-item input {
       width: 100%;
       min-width: 0;
@@ -707,7 +708,9 @@
       border-radius: 8px;
       font: 700 .82rem/1.35 inherit;
     }
+    .row-filter-item select:focus,
     .row-filter-item input:focus { border-color: var(--gold); outline: 0; box-shadow: 0 0 0 3px rgba(197,145,50,.15); }
+    .row-filter-item input[hidden] { display: none; }
     .row-filter-item small { grid-column: 1 / -1; color: #786d70; font-size: .68rem; line-height: 1.45; }
 
     .date-loader {
@@ -1015,7 +1018,7 @@
           <div class="row-filter-control">
             <button type="button" class="btn row-filter-toggle" id="rowFilterToggle" aria-expanded="false" aria-controls="rowFilterPanel" disabled>Filter Causelist Tables &amp; Rows</button>
             <section class="row-filter-panel" id="rowFilterPanel" aria-label="प्रत्येक causelist table का rows छान्नुहोस्" hidden>
-              <p class="row-filter-intro">प्रत्येक table मा <b>ALL</b> default हो। निश्चित rows मात्र राख्न serial हरू comma ले छुट्याएर लेख्नुहोस्—जस्तै: <b>क, ग, २, ४</b>।</p>
+              <p class="row-filter-intro">प्रत्येक table मा <b>ALL</b> default हो। <b>ALL+</b> ले सबै content राख्छ, <b>ALL</b> ले हेर्न नभ्याइने/हेर्न नमिल्ने/स्थगित rows हटाउँछ, <b>ALL-</b> ले table नै हटाउँछ, र <b>Custom</b> मा serial हरू comma ले छुट्याएर लेख्नुहोस्—जस्तै: <b>क, ग, २, ४</b>।</p>
               <div class="row-filter-list" id="rowFilterList"></div>
               <p class="row-filter-status" id="rowFilterStatus" role="status" aria-live="polite"></p>
             </section>
@@ -2649,18 +2652,32 @@
           .toLowerCase();
       }
 
-      function parseRowFilterValue(value) {
-        const raw = String(value == null ? "ALL" : value).trim();
-        if (!raw || /^(?:all|सबै)$/i.test(raw)) return { all: true, serials: new Set() };
-        const serials = new Set(
-          raw
+      function normalizeRowFilterMode(value) {
+        const mode = String(value || "ALL").trim().toUpperCase();
+        return ["ALL+", "ALL", "ALL-", "CUSTOM"].includes(mode) ? mode : "ALL";
+      }
+
+      function rowFilterSelection(key) {
+        const stored = rowFilterSelections.get(key);
+        if (stored && typeof stored === "object") {
+          return {
+            mode: normalizeRowFilterMode(stored.mode),
+            serials: String(stored.serials || ""),
+          };
+        }
+        if (typeof stored === "string" && stored.trim() && !/^(?:all|सबै)$/i.test(stored.trim())) {
+          return { mode:"CUSTOM", serials:stored };
+        }
+        return { mode:"ALL", serials:"" };
+      }
+
+      function parseCustomRowSerials(value) {
+        return new Set(
+          String(value || "")
             .split(/[,，、;\n]+/)
             .map(normalizeRowSerial)
             .filter(Boolean),
         );
-        if (serials.has("all") || serials.has(normalizeRowSerial("सबै")))
-          return { all: true, serials: new Set() };
-        return { all: !serials.size, serials };
       }
 
       function causeListTableInfo(table) {
@@ -2736,8 +2753,14 @@
       }
 
       function captureRowFilterInputs() {
-        rowFilterList.querySelectorAll("[data-row-filter-key]").forEach((input) => {
-          rowFilterSelections.set(input.dataset.rowFilterKey, input.value || "ALL");
+        rowFilterList.querySelectorAll("[data-row-filter-item-key]").forEach((item) => {
+          const key = item.dataset.rowFilterItemKey;
+          const mode = item.querySelector("[data-row-filter-mode]");
+          const custom = item.querySelector("[data-row-filter-custom]");
+          rowFilterSelections.set(key, {
+            mode: normalizeRowFilterMode(mode && mode.value),
+            serials: custom ? custom.value : "",
+          });
         });
       }
 
@@ -2756,25 +2779,46 @@
           rowFilterTables.forEach((entry, index) => {
             const item = document.createElement("div");
             item.className = "row-filter-item";
-            const inputId = "rowFilterTable" + (index + 1);
+            item.dataset.rowFilterItemKey = entry.key;
+            const selectId = "rowFilterTable" + (index + 1);
             const label = document.createElement("label");
-            label.htmlFor = inputId;
+            label.htmlFor = selectId;
             label.textContent = `Table ${index + 1} · इजलास ${entry.bench} · सूची ${entry.causeList}`;
-            const input = document.createElement("input");
-            input.id = inputId;
-            input.type = "text";
-            input.value = rowFilterSelections.get(entry.key) || "ALL";
-            input.placeholder = "ALL वा क, ग, २, ४";
-            input.dataset.rowFilterKey = entry.key;
-            input.setAttribute("aria-label", `Table ${index + 1} का serial rows`);
-            input.addEventListener("input", () => {
-              rowFilterSelections.set(entry.key, input.value || "ALL");
+            const selection = rowFilterSelection(entry.key);
+            const mode = document.createElement("select");
+            mode.id = selectId;
+            mode.dataset.rowFilterMode = "";
+            mode.setAttribute("aria-label", `Table ${index + 1} को filter mode`);
+            ["ALL+", "ALL", "ALL-", "Custom"].forEach((labelText) => {
+              const option = document.createElement("option");
+              option.value = labelText.toUpperCase();
+              option.textContent = labelText;
+              mode.appendChild(option);
             });
+            mode.value = selection.mode;
+            const custom = document.createElement("input");
+            custom.type = "text";
+            custom.value = selection.serials;
+            custom.placeholder = "क, ग, २, ४";
+            custom.dataset.rowFilterCustom = "";
+            custom.setAttribute("aria-label", `Table ${index + 1} का Custom serial rows`);
+            function syncSelection() {
+              const customMode = mode.value === "CUSTOM";
+              custom.hidden = !customMode;
+              custom.disabled = !customMode;
+              rowFilterSelections.set(entry.key, {mode:mode.value, serials:custom.value});
+            }
+            mode.addEventListener("change", () => {
+              syncSelection();
+              if (mode.value === "CUSTOM") custom.focus();
+            });
+            custom.addEventListener("input", syncSelection);
+            syncSelection();
             const hint = document.createElement("small");
             hint.textContent = entry.info.serials.length
               ? "उपलब्ध serial: " + entry.info.serials.join(", ")
               : "यस table मा serial rows भेटिएनन्।";
-            item.append(label, input, hint);
+            item.append(label, mode, custom, hint);
             rowFilterList.appendChild(item);
           });
           rowFilterStatus.textContent = rowFilterTables.length
@@ -2861,29 +2905,49 @@
         // User ले प्रत्येक causelist table का लागि दिएको serial selection लागू गरिन्छ।
         let removedRequestedRows = 0;
         let explicitlyFilteredTables = 0;
+        let fullyIncludedTables = 0;
+        let excludedTables = 0;
         const unmatchedRowSerials = [];
+        const defaultModeTables = new Set();
         targetCauseListTables(parsed, false).forEach((entry, index) => {
-          const requested = parseRowFilterValue(rowFilterSelections.get(entry.key) || "ALL");
-          if (requested.all) return;
+          const selection = rowFilterSelection(entry.key);
+          if (selection.mode === "ALL-") {
+            entry.table.remove();
+            excludedTables += 1;
+            return;
+          }
+          if (selection.mode === "ALL+") {
+            fullyIncludedTables += 1;
+            return;
+          }
+          if (selection.mode === "ALL") {
+            defaultModeTables.add(entry.table);
+            return;
+          }
+          const requested = parseCustomRowSerials(selection.serials);
+          if (!requested.size) {
+            throw new Error(`Table ${index + 1} मा Custom चयन गरिएको छ तर serial लेखिएको छैन।`);
+          }
           explicitlyFilteredTables += 1;
           const matched = new Set();
           entry.info.dataRows.forEach((item) => {
-            if (requested.serials.has(item.serial)) {
+            if (requested.has(item.serial)) {
               matched.add(item.serial);
               return;
             }
             item.row.remove();
             removedRequestedRows += 1;
           });
-          const missing = Array.from(requested.serials).filter((serial) => !matched.has(serial));
+          const missing = Array.from(requested).filter((serial) => !matched.has(serial));
           if (missing.length)
             unmatchedRowSerials.push(`Table ${index + 1}: ${missing.join(", ")}`);
         });
 
-        // लक्षित इजलासभित्र पनि अन्तिम disposition column मा यी अवस्था भएका मुद्दा output मा राखिँदैनन्।
+        // Default ALL mode मा मात्र अन्तिम disposition column का excluded अवस्था हटाइन्छन्।
         let removedDispositionRows = 0;
-        const excludedDispositionKeys = ["हेर्न नभ्याइने", "हेर्न नभ्याईने", "स्थगित"].map(normalize);
-        Array.from(parsed.querySelectorAll("table[data-cob-causelist-number]")).forEach((table) => {
+        const excludedDispositionKeys = ["हेर्न नभ्याइने", "हेर्न नभ्याईने", "हेर्न नमिल्ने", "स्थगित"].map(normalize);
+        defaultModeTables.forEach((table) => {
+          if (!table.isConnected) return;
           Array.from(table.querySelectorAll("tr")).forEach((row) => {
             const cells = Array.from(row.children).filter((cell) => cell.tagName === "TD");
             if (!cells.length) return;
@@ -2926,6 +2990,8 @@
           removedDispositionRows,
           removedRequestedRows,
           explicitlyFilteredTables,
+          fullyIncludedTables,
+          excludedTables,
           unmatchedRowSerials,
           selectedRows,
           causeDate: sourceMeta.causeDate || normalizeBsDate(loadedCauseDateKey)
@@ -2963,10 +3029,17 @@
           setOutputMenu(false);
           inlinePreview.srcdoc = outputCode;
           const dispositionNote = result.removedDispositionRows
-            ? ` ‘हेर्न नभ्याइने’ वा ‘स्थगित’ भएका ${toNepaliDigits(result.removedDispositionRows)} मुद्दा हटाइए।`
+            ? ` ALL mode मा ‘हेर्न नभ्याइने’, ‘हेर्न नमिल्ने’ वा ‘स्थगित’ भएका ${toNepaliDigits(result.removedDispositionRows)} मुद्दा हटाइए।`
             : "";
-          const rowFilterNote = result.explicitlyFilteredTables
-            ? ` ${toNepaliDigits(result.explicitlyFilteredTables)} table मा serial filter लागू गरी ${toNepaliDigits(result.removedRequestedRows)} अन्य row हटाइए।`
+          const modeNotes = [];
+          if (result.fullyIncludedTables)
+            modeNotes.push(`${toNepaliDigits(result.fullyIncludedTables)} table मा ALL+ लागू भयो।`);
+          if (result.excludedTables)
+            modeNotes.push(`${toNepaliDigits(result.excludedTables)} table ALL- ले हटाइयो।`);
+          if (result.explicitlyFilteredTables)
+            modeNotes.push(`${toNepaliDigits(result.explicitlyFilteredTables)} table मा Custom लागू गरी ${toNepaliDigits(result.removedRequestedRows)} अन्य row हटाइए।`);
+          const rowFilterNote = modeNotes.length
+            ? ` ${modeNotes.join(" ")}`
             : " सबै causelist tables मा ALL लागू छ।";
           const unmatchedNote = result.unmatchedRowSerials.length
             ? ` नभेटिएका serial—${result.unmatchedRowSerials.join("; ")}।`
