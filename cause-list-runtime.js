@@ -220,7 +220,7 @@
         // Both preview modes share the same editable document and save/sync hooks.
         const previewField = document.createElement("div");
         previewField.className = "cob-field";
-        previewField.innerHTML = '<label for="cobPreviewMode">Preview screen</label><select id="cobPreviewMode"><option value="existing" selected>Existing preview (पूर्वनिर्धारित)</option><option value="word">MS Word (.docx)</option></select>';
+        previewField.innerHTML = '<label for="cobPreviewMode">Preview screen</label><select id="cobPreviewMode"><option value="existing" selected>Existing preview (पूर्वनिर्धारित)</option><option value="word">MS Word (.docx)</option><option value="microsoft">Microsoft Word embed</option></select>';
         g.closest(".cob-field").after(previewField);
         const previewMode = previewField.querySelector("select"),
           wordRibbon = document.createElement("div");
@@ -250,10 +250,84 @@
             <button type="button" data-word-download>Download .docx</button>
           </div><p class="cob-word-status" role="status">Text छानेर formatting लागू गर्नुहोस्।</p>`;
         b.querySelector("#cobDraftWrap").before(wordRibbon);
+        const microsoftPanel = document.createElement("section");
+        microsoftPanel.className = "cob-microsoft-panel";
+        microsoftPanel.hidden = true;
+        microsoftPanel.setAttribute("aria-label", "Microsoft Word embed");
+        microsoftPanel.innerHTML = `
+          <h3>Microsoft Word embed</h3>
+          <p>OneDrive मा रहेको Word कागजातमा <strong>File → Share → Embed this document → Generate</strong> गरी प्राप्त Embed code वा URL यहाँ राख्नुहोस्।</p>
+          <label for="cobMicrosoftEmbed">Microsoft Embed code / URL</label>
+          <textarea id="cobMicrosoftEmbed" rows="3" spellcheck="false" placeholder="OneDrive बाट प्राप्त iframe code वा embed URL"></textarea>
+          <label for="cobMicrosoftEdit">Word मा सम्पादन गर्ने link (वैकल्पिक)</label>
+          <input id="cobMicrosoftEdit" type="url" placeholder="Microsoft Word / OneDrive को editing वा sharing link" autocomplete="off">
+          <div class="cob-microsoft-buttons"><button type="button" id="cobMicrosoftLoad">Embed खोल्नुहोस्</button><a id="cobMicrosoftOpen" target="_blank" rel="noopener noreferrer" hidden>Microsoft Word मा खोल्नुहोस् ↗</a><button type="button" id="cobMicrosoftLocalDocx">हालको स्थानीय मस्यौदा .docx डाउनलोड</button></div>
+          <p class="cob-microsoft-help">Embed सामान्यतः हेर्नका लागि हो। पूर्ण editing का लागि Microsoft Word मा खोल्नुहोस्; Microsoft को sign-in र कागजातको अनुमति लागू हुन्छ। स्थानीय मस्यौदा र Microsoft कागजातबीच स्वतः sync हुँदैन। यो link Save वा Submit मा समावेश हुँदैन।</p>
+          <p id="cobMicrosoftStatus" role="status" aria-live="polite"></p>
+          <iframe id="cobMicrosoftFrame" title="Microsoft Word embedded document" referrerpolicy="no-referrer" allowfullscreen hidden></iframe>`;
+        wordRibbon.after(microsoftPanel);
+        const microsoftInput = microsoftPanel.querySelector("#cobMicrosoftEmbed"),
+          microsoftEdit = microsoftPanel.querySelector("#cobMicrosoftEdit"),
+          microsoftFrame = microsoftPanel.querySelector("iframe"),
+          microsoftOpen = microsoftPanel.querySelector("#cobMicrosoftOpen"),
+          microsoftStatus = microsoftPanel.querySelector("#cobMicrosoftStatus");
+        let microsoftEmbedUrl = "";
+        function microsoftUrl(value, embedOnly) {
+          const url = new URL(value), host = url.hostname.toLowerCase();
+          if (url.protocol !== "https:" || url.username || url.password || (url.port && url.port !== "443")) throw new Error("invalid");
+          const oneDrive = host === "onedrive.live.com",
+            office = host.endsWith(".officeapps.live.com"),
+            sharePoint = host.endsWith(".sharepoint.com");
+          if (embedOnly) {
+            const valid = (oneDrive && /^\/embed\/?$/i.test(url.pathname)) ||
+              (office && /\/(?:embed\.aspx|wordviewerframe\.aspx)$/i.test(url.pathname)) ||
+              (sharePoint && /\/_layouts\/15\/Doc\.aspx$/i.test(url.pathname) && url.searchParams.get("action")?.toLowerCase() === "embedview");
+            if (!valid) throw new Error("embed");
+          } else if (!(oneDrive || office || sharePoint || host === "1drv.ms" || host === "word.cloud.microsoft" || host === "www.office.com" || host === "word.office.com")) throw new Error("host");
+          return url.href;
+        }
+        function resetMicrosoftEmbed() {
+          microsoftEmbedUrl = "";
+          microsoftInput.value = "";
+          microsoftEdit.value = "";
+          microsoftFrame.removeAttribute("src");
+          microsoftFrame.hidden = true;
+          microsoftOpen.removeAttribute("href");
+          microsoftOpen.hidden = true;
+          microsoftStatus.textContent = "";
+        }
+        microsoftPanel.querySelector("#cobMicrosoftLoad").addEventListener("click", function () {
+          try {
+            let value = microsoftInput.value.trim();
+            if (value.startsWith("<")) {
+              const template = document.createElement("template");
+              template.innerHTML = value;
+              const frames = template.content.querySelectorAll("iframe");
+              if (frames.length !== 1) throw new Error("iframe");
+              value = frames[0].getAttribute("src") || "";
+            }
+            const embed = microsoftUrl(value, true),
+              edit = microsoftEdit.value.trim() ? microsoftUrl(microsoftEdit.value.trim(), false) : embed;
+            microsoftEmbedUrl = embed;
+            microsoftFrame.src = embed;
+            microsoftFrame.hidden = false;
+            microsoftOpen.href = edit;
+            microsoftOpen.hidden = false;
+            microsoftStatus.textContent = "Microsoft viewer खोल्ने अनुरोध पठाइयो। नखुलेमा link र sharing अनुमति जाँच्नुहोस् वा Microsoft Word मा खोल्नुहोस्।";
+          } catch (error) {
+            microsoftStatus.textContent = "मान्य Microsoft Embed code / HTTPS embed URL राख्नुहोस्। सामान्य sharing link मात्रले embed खुल्दैन; वैकल्पिक editing link पनि Microsoft कै हुनुपर्छ।";
+          }
+        });
+        microsoftPanel.querySelector("#cobMicrosoftLocalDocx").addEventListener("click", function () { b.querySelector("#cobDocx").click(); });
         function setPreviewMode(mode) {
-          previewMode.value = mode === "word" ? "word" : "existing";
+          previewMode.value = ["word", "microsoft"].includes(mode) ? mode : "existing";
           b.classList.toggle("cob-word-mode", previewMode.value === "word");
           wordRibbon.hidden = previewMode.value !== "word";
+          const embedded = previewMode.value === "microsoft";
+          b.classList.toggle("cob-microsoft-mode", embedded);
+          microsoftPanel.hidden = !embedded;
+          if (embedded && microsoftEmbedUrl) microsoftFrame.src = microsoftEmbedUrl;
+          else microsoftFrame.removeAttribute("src");
         }
         previewMode.addEventListener("change", function () { setPreviewMode(previewMode.value); });
         function markWordBlocks() {
@@ -1160,6 +1234,7 @@
             !1 !== e && w.focus());
         }
         function re() {
+          microsoftFrame.removeAttribute("src");
           (setToolsOpen(!1),
             b.classList.remove("cob-open"),
             (document.body.style.overflow = ""),
@@ -1818,7 +1893,8 @@
                                   ? "full"
                                   : "none"));
                           }
-                          (setPreviewMode("existing"),
+                          (resetMicrosoftEmbed(),
+                            setPreviewMode("existing"),
                             (savedDraftRange = null),
                             Z(),
                             Q(),
