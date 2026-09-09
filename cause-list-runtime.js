@@ -217,6 +217,96 @@
           ),
           (b.querySelector(".cob-note").textContent =
             "श्रीमान् र मुद्दाको विवरण source row बाट स्वतः लिइन्छ। तलको preview मा व्यहोरा सिधै सम्पादन गर्नुहोस्।"));
+        // Both preview modes share the same editable document and save/sync hooks.
+        const previewField = document.createElement("div");
+        previewField.className = "cob-field";
+        previewField.innerHTML = '<label for="cobPreviewMode">Preview screen</label><select id="cobPreviewMode"><option value="existing" selected>Existing preview (पूर्वनिर्धारित)</option><option value="word">MS Word (.docx)</option></select>';
+        g.closest(".cob-field").after(previewField);
+        const previewMode = previewField.querySelector("select"),
+          wordRibbon = document.createElement("div");
+        wordRibbon.className = "cob-word-ribbon";
+        wordRibbon.hidden = true;
+        wordRibbon.setAttribute("role", "region");
+        wordRibbon.setAttribute("aria-label", "Word formatting tools");
+        wordRibbon.innerHTML = `
+          <div class="cob-word-title"><strong>Word-style editor</strong><small>ब्राउजरमा सम्पादन · .docx डाउनलोड</small></div>
+          <div class="cob-word-controls">
+            <button type="button" data-word-command="undo">Undo</button><button type="button" data-word-command="redo">Redo</button>
+            <label>Font <select data-word-command="fontName"><option>Kalimati</option><option>Nirmala UI</option><option>Mangal</option><option>Noto Serif Devanagari</option><option>Arial</option><option>Times New Roman</option></select></label>
+            <label>Size (pt) <select data-word-size><option>9</option><option>10</option><option>11</option><option>12</option><option selected>13</option><option>14</option><option>16</option><option>18</option><option>20</option><option>24</option><option>28</option><option>36</option><option>48</option><option>72</option></select></label>
+            <button type="button" data-word-command="bold" aria-label="Bold"><b>B</b></button>
+            <button type="button" data-word-command="italic" aria-label="Italic"><i>I</i></button>
+            <button type="button" data-word-command="underline" aria-label="Underline"><u>U</u></button>
+            <button type="button" data-word-command="strikeThrough" aria-label="Strikethrough"><s>S</s></button>
+            <button type="button" data-word-command="superscript">x²</button><button type="button" data-word-command="subscript">x₂</button>
+            <label>Text <input type="color" value="#111111" data-word-command="foreColor" aria-label="Text colour"></label>
+            <label>Highlight <input type="color" value="#ffff00" data-word-command="hiliteColor" aria-label="Highlight colour"></label>
+            <button type="button" data-word-align="left">Left</button><button type="button" data-word-align="center">Center</button><button type="button" data-word-align="right">Right</button><button type="button" data-word-align="justify">Justify</button>
+            <label>Line spacing <select data-word-spacing><option value="1">1</option><option value="1.15" selected>1.15</option><option value="1.5">1.5</option><option value="2">2</option></select></label>
+            <button type="button" data-word-tool="bullet-add">• Bullet</button><button type="button" data-word-tool="bullet-remove">− Bullet</button>
+            <button type="button" data-word-tool="subbullet-add">◦ Subbullet</button><button type="button" data-word-tool="subbullet-remove">− Subbullet</button>
+            <button type="button" data-word-tool="tab-remove">← Indent</button><button type="button" data-word-tool="tab-add">Indent →</button>
+            <button type="button" data-word-command="removeFormat">Clear formatting</button>
+            <button type="button" data-word-download>Download .docx</button>
+          </div><p class="cob-word-status" role="status">Text छानेर formatting लागू गर्नुहोस्।</p>`;
+        b.querySelector("#cobDraftWrap").before(wordRibbon);
+        function setPreviewMode(mode) {
+          previewMode.value = mode === "word" ? "word" : "existing";
+          b.classList.toggle("cob-word-mode", previewMode.value === "word");
+          wordRibbon.hidden = previewMode.value !== "word";
+        }
+        previewMode.addEventListener("change", function () { setPreviewMode(previewMode.value); });
+        function markWordBlocks() {
+          w.querySelectorAll("p,li,[data-docx-p],.cob-main-body > div").forEach(function (block) {
+            block.dataset.wordRich = "1";
+          });
+        }
+        w.addEventListener("input", function () {
+          if (previewMode.value === "word" || w.querySelector('[data-word-rich="1"]')) markWordBlocks();
+        });
+        wordRibbon.addEventListener("mousedown", function (event) {
+          if (event.target.closest("button")) event.preventDefault();
+        });
+        function wordAction(control) {
+          if (control.hasAttribute("data-word-download")) {
+            b.querySelector("#cobDocx").click();
+            return;
+          }
+          const status = wordRibbon.querySelector(".cob-word-status");
+          if (!savedDraftRange || !w.contains(savedDraftRange.commonAncestorContainer)) {
+            status.textContent = "पहिले कागजातमा cursor राख्नुहोस् वा text छान्नुहोस्।";
+            return;
+          }
+          w.focus({ preventScroll: true });
+          restoreDraftRange();
+          if (control.dataset.wordTool) applyParagraphTool(control.dataset.wordTool);
+          else if (control.dataset.wordAlign || control.hasAttribute("data-word-spacing")) {
+            selectedDraftBlocks().forEach(function (block) {
+              if (control.dataset.wordAlign) block.style.textAlign = control.dataset.wordAlign;
+              else block.style.lineHeight = control.value;
+            });
+          } else {
+            document.execCommand("styleWithCSS", false, true);
+            if (control.hasAttribute("data-word-size")) {
+              document.execCommand("fontSize", false, "7");
+              w.querySelectorAll('font[size="7"],span[style]').forEach(function (span) {
+                if (span.getAttribute("size") === "7" || span.style.fontSize === "xxx-large") {
+                  span.removeAttribute("size"); span.style.fontSize = control.value + "pt";
+                }
+              });
+            } else document.execCommand(control.dataset.wordCommand, false, control.value || null);
+          }
+          markWordBlocks();
+          rememberDraftRange();
+          w.dispatchEvent(new Event("input", { bubbles: true }));
+          status.textContent = "Formatting लागू भयो। Save वा Download .docx गर्न सक्नुहुन्छ।";
+        }
+        wordRibbon.querySelectorAll("button").forEach(function (control) {
+          control.addEventListener("click", function () { wordAction(control); });
+        });
+        wordRibbon.querySelectorAll("select,input").forEach(function (control) {
+          control.addEventListener("change", function () { wordAction(control); });
+        });
         let T = null,
           j = "none",
           A = "",
@@ -1231,9 +1321,56 @@
             t
           );
         }
+        function wordParagraphXml(element) {
+          function colour(value) {
+            const rgb = String(value).match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+            return rgb ? rgb.slice(1).map(function (n) { return Number(n).toString(16).padStart(2, "0"); }).join("") : null;
+          }
+          function runs(node) {
+            if (node.nodeType === 3) {
+              const style = getComputedStyle(node.parentElement),
+                size = Math.max(2, Math.min(144, parseFloat(style.fontSize) * 1.5 || 26)),
+                font = style.fontFamily.split(",")[0].replace(/["']/g, ""),
+                ink = colour(style.color), fill = colour(style.backgroundColor);
+              let props = '<w:rFonts w:ascii="' + s(font) + '" w:hAnsi="' + s(font) + '" w:cs="' + s(font) + '"/><w:sz w:val="' + Math.round(size) + '"/><w:szCs w:val="' + Math.round(size) + '"/>';
+              if (Number(style.fontWeight) >= 600 || style.fontWeight === "bold") props += "<w:b/><w:bCs/>";
+              if (style.fontStyle === "italic") props += "<w:i/><w:iCs/>";
+              let decorated = node.parentElement;
+              while (decorated && w.contains(decorated)) {
+                const line = getComputedStyle(decorated).textDecorationLine;
+                if (line.includes("underline") && !props.includes("<w:u")) props += '<w:u w:val="single"/>';
+                if (line.includes("line-through") && !props.includes("<w:strike")) props += "<w:strike/>";
+                decorated = decorated.parentElement;
+              }
+              if (ink) props += '<w:color w:val="' + ink + '"/>';
+              if (fill && style.backgroundColor !== "rgba(0, 0, 0, 0)") props += '<w:shd w:fill="' + fill + '"/>';
+              if (style.verticalAlign === "super" || node.parentElement.closest("sup")) props += '<w:vertAlign w:val="superscript"/>';
+              if (style.verticalAlign === "sub" || node.parentElement.closest("sub")) props += '<w:vertAlign w:val="subscript"/>';
+              return '<w:r><w:rPr>' + props + '</w:rPr>' + String(node.nodeValue || "").split(/(\t|\n)/).map(function (part) {
+                return part === "\t" ? "<w:tab/>" : part === "\n" ? "<w:br/>" : '<w:t xml:space="preserve">' + s(part) + '</w:t>';
+              }).join("") + '</w:r>';
+            }
+            if (node.nodeType !== 1) return "";
+            if (node.tagName === "BR") return "<w:r><w:br/></w:r>";
+            if (node.matches(".cob-party-leader,.cob-iti-leader")) return "<w:r><w:tab/></w:r>";
+            return Array.from(node.childNodes).map(runs).join("");
+          }
+          const style = getComputedStyle(element),
+            align = style.textAlign === "justify" ? "both" : ["left", "right", "center"].includes(style.textAlign) ? style.textAlign : "left",
+            line = Math.round((parseFloat(style.lineHeight) / parseFloat(style.fontSize) || 1.15) * 240),
+            left = Math.max(0, Number(element.dataset.docxLeft || 0)),
+            first = Math.round(parseFloat(style.textIndent) * 15 || 0),
+            tabs = element.matches(".cob-party,.cob-iti") ? '<w:tabs><w:tab w:val="right" w:leader="dot" w:pos="' + (g.value === "फैसला" ? 9224 : 9638) + '"/></w:tabs>' : "";
+          return '<w:p><w:pPr>' + tabs + '<w:jc w:val="' + align + '"/><w:spacing w:line="' + line + '" w:lineRule="auto" w:before="0" w:after="0"/><w:ind w:left="' + left + '" w:firstLine="' + Math.max(0, first) + '"/></w:pPr>' + runs(element) + '</w:p>';
+        }
         function draftDocxBlocks(e) {
           const t = [];
           function n(e, n) {
+            if (e.nodeType === 1 && (e.dataset.wordRich === "1" || e.querySelector('[data-word-rich="1"]'))) {
+              const blocks = Array.from(e.querySelectorAll("p,li,div")).filter(function (node) { return !node.querySelector("p,li,div"); });
+              (blocks.length ? blocks : [e]).forEach(function (block) { t.push({ wordXml: wordParagraphXml(block) }); });
+              return;
+            }
             const a = draftNodeText(e).replace(/\r/g, "").split("\n"),
               o = n ? Object.assign({}, n) : {};
             for (; a.length > 1 && !a[a.length - 1]; ) a.pop();
@@ -1359,6 +1496,7 @@
               ),
               t = draftDocxBlocks(w)
                 .map(function (t) {
+                  if (t.wordXml) return t.wordXml;
                   return (function (e, t) {
                     const a = r(" " === e.textContent ? "" : e.textContent),
                       o =
@@ -1680,7 +1818,9 @@
                                   ? "full"
                                   : "none"));
                           }
-                          (Z(),
+                          (setPreviewMode("existing"),
+                            (savedDraftRange = null),
+                            Z(),
                             Q(),
                             b.classList.add("cob-open"),
                             (document.body.style.overflow = "hidden"),
