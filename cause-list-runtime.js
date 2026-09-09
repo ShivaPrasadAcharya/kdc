@@ -1396,7 +1396,7 @@
             t
           );
         }
-        function wordParagraphXml(element) {
+        function wordParagraphXml(element, contentNodes) {
           function colour(value) {
             const rgb = String(value).match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/);
             return rgb ? rgb.slice(1).map(function (n) { return Number(n).toString(16).padStart(2, "0"); }).join("") : null;
@@ -1421,7 +1421,7 @@
               if (fill && style.backgroundColor !== "rgba(0, 0, 0, 0)") props += '<w:shd w:fill="' + fill + '"/>';
               if (style.verticalAlign === "super" || node.parentElement.closest("sup")) props += '<w:vertAlign w:val="superscript"/>';
               if (style.verticalAlign === "sub" || node.parentElement.closest("sub")) props += '<w:vertAlign w:val="subscript"/>';
-              return '<w:r><w:rPr>' + props + '</w:rPr>' + String(node.nodeValue || "").split(/(\t|\n)/).map(function (part) {
+              return '<w:r><w:rPr>' + props + '</w:rPr>' + String(node.nodeValue || "").replace(/\r\n?/g, "\n").split(/(\t|\n)/).map(function (part) {
                 return part === "\t" ? "<w:tab/>" : part === "\n" ? "<w:br/>" : '<w:t xml:space="preserve">' + s(part) + '</w:t>';
               }).join("") + '</w:r>';
             }
@@ -1436,64 +1436,40 @@
             left = Math.max(0, Number(element.dataset.docxLeft || 0)),
             first = Math.round(parseFloat(style.textIndent) * 15 || 0),
             tabs = element.matches(".cob-party,.cob-iti") ? '<w:tabs><w:tab w:val="right" w:leader="dot" w:pos="' + (g.value === "फैसला" ? 9224 : 9638) + '"/></w:tabs>' : "";
-          return '<w:p><w:pPr>' + tabs + '<w:jc w:val="' + align + '"/><w:spacing w:line="' + line + '" w:lineRule="auto" w:before="0" w:after="0"/><w:ind w:left="' + left + '" w:firstLine="' + Math.max(0, first) + '"/></w:pPr>' + runs(element) + '</w:p>';
+          const before = Math.max(0, Math.round(parseFloat(style.marginTop) * 15 || 0)),
+            after = Math.max(0, Math.round(parseFloat(style.marginBottom) * 15 || 0)),
+            nodes = Array.from(contentNodes || element.childNodes);
+          // A lone BR is the browser placeholder for an empty paragraph.
+          // All other BRs, including consecutive/trailing breaks, are explicit.
+          if (nodes.length === 1 && nodes[0].nodeName === "BR") nodes.pop();
+          return '<w:p><w:pPr>' + tabs + '<w:jc w:val="' + align + '"/><w:spacing w:line="' + line + '" w:lineRule="auto" w:before="' + before + '" w:after="' + after + '"/><w:ind w:left="' + left + '" w:firstLine="' + Math.max(0, first) + '"/></w:pPr>' + nodes.map(runs).join("") + '</w:p>';
         }
-        function draftDocxBlocks(e) {
-          const t = [];
-          function n(e, n) {
-            if (e.nodeType === 1 && (e.dataset.wordRich === "1" || e.querySelector('[data-word-rich="1"]'))) {
-              const blocks = Array.from(e.querySelectorAll("p,li,div")).filter(function (node) { return !node.querySelector("p,li,div"); });
-              (blocks.length ? blocks : [e]).forEach(function (block) { t.push({ wordXml: wordParagraphXml(block) }); });
-              return;
-            }
-            const a = draftNodeText(e).replace(/\r/g, "").split("\n"),
-              o = n ? Object.assign({}, n) : {};
-            for (; a.length > 1 && !a[a.length - 1]; ) a.pop();
-            (a.length ? a : [""]).forEach(function (e) {
-              t.push({ textContent: e || " ", dataset: Object.assign({}, o) });
-            });
+        function draftDocxBlocks(root) {
+          const blocks = [], blockSelector = "p,div,li,section,article,h1,h2,h3,h4,h5,h6,blockquote,pre,ul,ol";
+          function emit(element, nodes) {
+            blocks.push({ wordXml: wordParagraphXml(element, nodes) });
           }
-          return (
-            Array.from(e.childNodes).forEach(function (e) {
-              if (3 === e.nodeType) {
-                r(e.nodeValue) && n(e, {});
-                return;
-              }
-              if (1 !== e.nodeType) return;
-              if (e.matches("[data-cob-main-body='1']")) {
-                Array.from(e.childNodes).forEach(function (e) {
-                  if (3 === e.nodeType) {
-                    r(e.nodeValue) && n(e, {});
-                    return;
-                  }
-                  if (1 !== e.nodeType) return;
-                  if (e.matches("[data-docx-p]")) {
-                    n(e, e.dataset);
-                    return;
-                  }
-                  const t = Array.from(e.querySelectorAll("[data-docx-p]"));
-                  t.length
-                    ? t.forEach(function (e) {
-                        n(e, e.dataset);
-                      })
-                    : n(e, {});
-                });
-                return;
-              }
-              if (e.matches("[data-docx-p]")) {
-                n(e, e.dataset);
-                return;
-              }
-              const t = Array.from(e.querySelectorAll("[data-docx-p]"));
-              t.length
-                ? t.forEach(function (e) {
-                    n(e, e.dataset);
-                  })
-                : n(e, {});
-            }),
-            t.length || n(e, {}),
-            t
-          );
+          function visit(element, container) {
+            let inline = [];
+            const hasBlocks = Array.from(element.children).some(function (child) { return child.matches(blockSelector); });
+            function flush() {
+              if (!inline.length) return;
+              // Ignore HTML indentation between block elements, but never trim
+              // text inside a paragraph or discard an explicit empty paragraph.
+              if (!hasBlocks || inline.some(function (node) { return node.nodeType === 1 || /[^\t\r\n ]/.test(node.nodeValue || ""); })) emit(element, inline);
+              inline = [];
+            }
+            Array.from(element.childNodes).forEach(function (node) {
+              if (node.nodeType === 1 && node.matches(blockSelector)) {
+                flush();
+                visit(node, node.matches("ul,ol,[data-cob-main-body='1']"));
+              } else if (node.nodeType === 1 || node.nodeType === 3) inline.push(node);
+            });
+            flush();
+            if (!container && !element.childNodes.length) emit(element, []);
+          }
+          visit(root, true);
+          return blocks;
         }
         (b.querySelector(".cob-close").addEventListener("click", re),
           b.addEventListener("click", function (e) {
@@ -1652,7 +1628,7 @@
                   ue([
                     {
                       name: "[Content_Types].xml",
-                      data: '<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>',
+                      data: '<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/><Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/></Types>',
                     },
                     {
                       name: "_rels/.rels",
@@ -1660,7 +1636,11 @@
                     },
                     {
                       name: "word/_rels/document.xml.rels",
-                      data: '<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>',
+                      data: '<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/></Relationships>',
+                    },
+                    {
+                      name: "word/settings.xml",
+                      data: '<?xml version="1.0" encoding="UTF-8"?><w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:compat><w:doNotExpandShiftReturn/></w:compat></w:settings>',
                     },
                     {
                       name: "word/styles.xml",
