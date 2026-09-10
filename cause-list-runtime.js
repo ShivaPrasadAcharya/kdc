@@ -432,6 +432,57 @@
         function setToolsStatus(message) {
           toolsStatus.textContent = message || "";
         }
+        const numberingTools = document.createElement("fieldset");
+        numberingTools.className = "cob-numbering-tools";
+        numberingTools.innerHTML = `<legend>Auto numbering / Sub-numbering</legend>
+          <label for="cobNumberStyle">Style</label><select id="cobNumberStyle"><option value="decimal">1, 2, 3</option><option value="hierarchical">1.1, 1.2, 1.3</option><option value="alpha">a, b, c</option><option value="ALPHA">A, B, C</option><option value="roman">i, ii, iii</option><option value="ROMAN">I, II, III</option></select>
+          <label for="cobNumberStart">Start at</label><input id="cobNumberStart" value="1" autocomplete="off" aria-describedby="cobNumberHelp">
+          <small id="cobNumberHelp">Start at: 1 वा 5; sub-numbering: 1.1 वा 2.3। Enter ले अर्को नम्बर थप्छ।</small>
+          <button type="button" id="cobNumberApply">Apply numbering</button><button type="button" id="cobNumberRemove">Remove numbering</button>`;
+        toolsPanel.querySelector(".cob-size-control").before(numberingTools);
+        const numberStyle = numberingTools.querySelector("select"), numberStart = numberingTools.querySelector("input");
+        numberStyle.addEventListener("change", function () { numberStart.value = numberStyle.value === "hierarchical" ? "1.1" : "1"; });
+        numberingTools.querySelectorAll("button").forEach(function (button) { button.addEventListener("mousedown", function (event) { event.preventDefault(); }); });
+        function numberLabel(format, value) {
+          if (format === "hierarchical") return value + ".";
+          const n = Number(value);
+          if (format === "decimal") return n + ".";
+          if (format === "alpha" || format === "ALPHA") {
+            let label = "", index = n;
+            while (index > 0) { index--; label = String.fromCharCode(97 + index % 26) + label; index = Math.floor(index / 26); }
+            return (format === "ALPHA" ? label.toUpperCase() : label) + ".";
+          }
+          let label = "", index = n;
+          [[1000,"M"],[900,"CM"],[500,"D"],[400,"CD"],[100,"C"],[90,"XC"],[50,"L"],[40,"XL"],[10,"X"],[9,"IX"],[5,"V"],[4,"IV"],[1,"I"]].forEach(function (pair) { while (index >= pair[0]) { label += pair[1]; index -= pair[0]; } });
+          return (format === "roman" ? label.toLowerCase() : label) + ".";
+        }
+        function refreshNumbering() {
+          const groups = new Map();
+          w.querySelectorAll('[data-cob-list="number"]').forEach(function (block) {
+            const group = block.dataset.cobNumberGroup;
+            let state = groups.get(group);
+            if (!state) { state = { count: 0, start: block.dataset.cobNumberStart || "1", format: block.dataset.cobNumberStyle || "decimal" }; groups.set(group, state); }
+            const parts = state.start.split("."), last = parts.length - 1;
+            parts[last] = String(Number(parts[last]) + state.count++);
+            let marker = listMarker(block);
+            if (!marker) { setBlockList(block, "number"); marker = listMarker(block); }
+            marker.textContent = numberLabel(state.format, parts.join(".")) + "\u00a0";
+          });
+        }
+        numberingTools.querySelector("#cobNumberApply").addEventListener("click", function () {
+          const blocks = selectedDraftBlocks(), start = numberStart.value.trim().replace(/[०-९]/g, function (n) { return "०१२३४५६७८९".indexOf(n); });
+          const valid = numberStyle.value === "hierarchical" ? /^[1-9]\d*(?:\.[1-9]\d*)+$/.test(start) : /^[1-9]\d*$/.test(start);
+          if (!valid || start.split(".").some(function (n) { return Number(n) > 3999; })) { setToolsStatus("Start at मा 1–3999 राख्नुहोस्; sub-numbering मा 1.1 जस्तै राख्नुहोस्।"); return; }
+          if (!blocks.length) { setToolsStatus("पहिले paragraph छान्नुहोस् वा cursor राख्नुहोस्।"); return; }
+          const group = "num-" + Date.now() + "-" + Math.random().toString(36).slice(2);
+          blocks.forEach(function (block) { block.dataset.cobNumberGroup = group; block.dataset.cobNumberStart = start; block.dataset.cobNumberStyle = numberStyle.value; setBlockList(block, "number"); });
+          refreshNumbering(); rememberDraftRange(); w.dispatchEvent(new Event("input", { bubbles: true })); setToolsStatus("Numbering लागू भयो। Enter ले अर्को नम्बर थप्छ।");
+        });
+        numberingTools.querySelector("#cobNumberRemove").addEventListener("click", function () {
+          selectedDraftBlocks().forEach(function (block) { if (block.dataset.cobList === "number") setBlockList(block, "none"); });
+          refreshNumbering(); w.dispatchEvent(new Event("input", { bubbles: true }));
+        });
+        w.addEventListener("input", refreshNumbering);
         function listMarker(block) {
           return Array.from(block.children).find(function (child) {
             return child.hasAttribute("data-cob-list-marker");
@@ -445,7 +496,7 @@
             listLevel =
               "subbullet" === block.dataset.cobList
                 ? 2
-                : "bullet" === block.dataset.cobList
+                : ["bullet", "number"].includes(block.dataset.cobList)
                   ? 1
                   : 0,
             totalLevel = tabLevel + listLevel;
@@ -457,6 +508,7 @@
         }
         function setBlockList(block, mode) {
           let marker = listMarker(block);
+          if (mode !== "number") { delete block.dataset.cobNumberGroup; delete block.dataset.cobNumberStart; delete block.dataset.cobNumberStyle; }
           if ("none" === mode) {
             marker && marker.remove();
             delete block.dataset.cobList;
@@ -471,7 +523,7 @@
             block.insertBefore(marker, block.firstChild);
           }
           block.dataset.cobList = mode;
-          marker.textContent = "subbullet" === mode ? "◦\u00a0" : "•\u00a0";
+          marker.textContent = mode === "number" ? numberLabel(block.dataset.cobNumberStyle || "decimal", block.dataset.cobNumberStart || "1") + "\u00a0" : "subbullet" === mode ? "◦\u00a0" : "•\u00a0";
           updateBlockIndent(block);
         }
         function applyParagraphTool(tool) {
@@ -518,7 +570,11 @@
           if (!range.collapsed) return !1;
           const block = draftBlockForNode(range.startContainer),
             mode = block && block.dataset.cobList;
-          if (!block || !["bullet", "subbullet"].includes(mode)) return !1;
+          if (!block || !["bullet", "subbullet", "number"].includes(mode)) return !1;
+          if (mode === "number") {
+            const copy = block.cloneNode(true); copy.querySelectorAll("[data-cob-list-marker]").forEach(function (marker) { marker.remove(); });
+            if (!copy.textContent.trim()) { event.preventDefault(); setBlockList(block, "none"); w.dispatchEvent(new Event("input", { bubbles: true })); return true; }
+          }
           event.preventDefault();
           const tailRange = document.createRange();
           tailRange.selectNodeContents(block);
@@ -536,6 +592,7 @@
             r(tail.textContent) || Boolean(tail.querySelector("br,*"));
           hasTail ? next.appendChild(tail) : next.appendChild(document.createElement("br"));
           block.after(next);
+          if (mode === "number") refreshNumbering();
           const marker = listMarker(next),
             caretNode = marker && marker.nextSibling,
             caret = document.createRange();
@@ -548,7 +605,7 @@
           selection.addRange(caret);
           savedDraftRange = caret.cloneRange();
           setToolsStatus(
-            ("subbullet" === mode ? "Subbullet" : "Bullet") +
+            (mode === "number" ? "Numbering" : "subbullet" === mode ? "Subbullet" : "Bullet") +
               " को नयाँ item तयार भयो।",
           );
           w.dispatchEvent(new Event("input", { bubbles: !0 }));
@@ -1397,6 +1454,7 @@
           );
         }
         function wordParagraphXml(element, contentNodes) {
+          const bodyParagraph = Boolean(element.closest(".cob-main-body,[data-cob-main-body='1']"));
           function colour(value) {
             const rgb = String(value).match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/);
             return rgb ? rgb.slice(1).map(function (n) { return Number(n).toString(16).padStart(2, "0"); }).join("") : null;
@@ -1421,12 +1479,12 @@
               if (fill && style.backgroundColor !== "rgba(0, 0, 0, 0)") props += '<w:shd w:fill="' + fill + '"/>';
               if (style.verticalAlign === "super" || node.parentElement.closest("sup")) props += '<w:vertAlign w:val="superscript"/>';
               if (style.verticalAlign === "sub" || node.parentElement.closest("sub")) props += '<w:vertAlign w:val="subscript"/>';
-              return '<w:r><w:rPr>' + props + '</w:rPr>' + String(node.nodeValue || "").replace(/\r\n?/g, "\n").split(/(\t|\n)/).map(function (part) {
+              return '<w:r><w:rPr>' + props + '</w:rPr>' + String(node.nodeValue || "").replace(/\r\n?/g, "\n").replace(bodyParagraph ? /[ \t]*\n[ \t]*/g : /$^/g, " ").split(/(\t|\n)/).map(function (part) {
                 return part === "\t" ? "<w:tab/>" : part === "\n" ? "<w:br/>" : '<w:t xml:space="preserve">' + s(part) + '</w:t>';
               }).join("") + '</w:r>';
             }
             if (node.nodeType !== 1) return "";
-            if (node.tagName === "BR") return "<w:r><w:br/></w:r>";
+            if (node.tagName === "BR") return bodyParagraph ? '<w:r><w:t xml:space="preserve"> </w:t></w:r>' : "<w:r><w:br/></w:r>";
             if (node.matches(".cob-party-leader,.cob-iti-leader")) return "<w:r><w:tab/></w:r>";
             return Array.from(node.childNodes).map(runs).join("");
           }
