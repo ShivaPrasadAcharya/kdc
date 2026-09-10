@@ -217,170 +217,6 @@
           ),
           (b.querySelector(".cob-note").textContent =
             "श्रीमान् र मुद्दाको विवरण source row बाट स्वतः लिइन्छ। तलको preview मा व्यहोरा सिधै सम्पादन गर्नुहोस्।"));
-        // Both preview modes share the same editable document and save/sync hooks.
-        const previewField = document.createElement("div");
-        previewField.className = "cob-field";
-        previewField.innerHTML = '<label for="cobPreviewMode">Preview screen</label><select id="cobPreviewMode"><option value="existing" selected>Existing preview (पूर्वनिर्धारित)</option><option value="word">MS Word (.docx)</option><option value="microsoft">Microsoft Word embed</option></select>';
-        g.closest(".cob-field").after(previewField);
-        const previewMode = previewField.querySelector("select"),
-          wordRibbon = document.createElement("div");
-        wordRibbon.className = "cob-word-ribbon";
-        wordRibbon.hidden = true;
-        wordRibbon.setAttribute("role", "region");
-        wordRibbon.setAttribute("aria-label", "Word formatting tools");
-        wordRibbon.innerHTML = `
-          <div class="cob-word-title"><strong>Word-style editor</strong><small>ब्राउजरमा सम्पादन · .docx डाउनलोड</small></div>
-          <div class="cob-word-controls">
-            <button type="button" data-word-command="undo">Undo</button><button type="button" data-word-command="redo">Redo</button>
-            <label>Font <select data-word-command="fontName"><option>Kalimati</option><option>Nirmala UI</option><option>Mangal</option><option>Noto Serif Devanagari</option><option>Arial</option><option>Times New Roman</option></select></label>
-            <label>Size (pt) <select data-word-size><option>9</option><option>10</option><option>11</option><option>12</option><option selected>13</option><option>14</option><option>16</option><option>18</option><option>20</option><option>24</option><option>28</option><option>36</option><option>48</option><option>72</option></select></label>
-            <button type="button" data-word-command="bold" aria-label="Bold"><b>B</b></button>
-            <button type="button" data-word-command="italic" aria-label="Italic"><i>I</i></button>
-            <button type="button" data-word-command="underline" aria-label="Underline"><u>U</u></button>
-            <button type="button" data-word-command="strikeThrough" aria-label="Strikethrough"><s>S</s></button>
-            <button type="button" data-word-command="superscript">x²</button><button type="button" data-word-command="subscript">x₂</button>
-            <label>Text <input type="color" value="#111111" data-word-command="foreColor" aria-label="Text colour"></label>
-            <label>Highlight <input type="color" value="#ffff00" data-word-command="hiliteColor" aria-label="Highlight colour"></label>
-            <button type="button" data-word-align="left">Left</button><button type="button" data-word-align="center">Center</button><button type="button" data-word-align="right">Right</button><button type="button" data-word-align="justify">Justify</button>
-            <label>Line spacing <select data-word-spacing><option value="1">1</option><option value="1.15" selected>1.15</option><option value="1.5">1.5</option><option value="2">2</option></select></label>
-            <button type="button" data-word-tool="bullet-add">• Bullet</button><button type="button" data-word-tool="bullet-remove">− Bullet</button>
-            <button type="button" data-word-tool="subbullet-add">◦ Subbullet</button><button type="button" data-word-tool="subbullet-remove">− Subbullet</button>
-            <button type="button" data-word-tool="tab-remove">← Indent</button><button type="button" data-word-tool="tab-add">Indent →</button>
-            <button type="button" data-word-command="removeFormat">Clear formatting</button>
-            <button type="button" data-word-download>Download .docx</button>
-          </div><p class="cob-word-status" role="status">Text छानेर formatting लागू गर्नुहोस्।</p>`;
-        b.querySelector("#cobDraftWrap").before(wordRibbon);
-        const microsoftPanel = document.createElement("section");
-        microsoftPanel.className = "cob-microsoft-panel";
-        microsoftPanel.hidden = true;
-        microsoftPanel.setAttribute("aria-label", "Microsoft Word embed");
-        microsoftPanel.innerHTML = `
-          <h3>Microsoft Word embed</h3>
-          <p>OneDrive मा रहेको Word कागजातमा <strong>File → Share → Embed this document → Generate</strong> गरी प्राप्त Embed code वा URL यहाँ राख्नुहोस्।</p>
-          <label for="cobMicrosoftEmbed">Microsoft Embed code / URL</label>
-          <textarea id="cobMicrosoftEmbed" rows="3" spellcheck="false" placeholder="OneDrive बाट प्राप्त iframe code वा embed URL"></textarea>
-          <label for="cobMicrosoftEdit">Word मा सम्पादन गर्ने link (वैकल्पिक)</label>
-          <input id="cobMicrosoftEdit" type="url" placeholder="Microsoft Word / OneDrive को editing वा sharing link" autocomplete="off">
-          <div class="cob-microsoft-buttons"><button type="button" id="cobMicrosoftLoad">Embed खोल्नुहोस्</button><a id="cobMicrosoftOpen" target="_blank" rel="noopener noreferrer" hidden>Microsoft Word मा खोल्नुहोस् ↗</a><button type="button" id="cobMicrosoftLocalDocx">हालको स्थानीय मस्यौदा .docx डाउनलोड</button></div>
-          <p class="cob-microsoft-help">Embed सामान्यतः हेर्नका लागि हो। पूर्ण editing का लागि Microsoft Word मा खोल्नुहोस्; Microsoft को sign-in र कागजातको अनुमति लागू हुन्छ। स्थानीय मस्यौदा र Microsoft कागजातबीच स्वतः sync हुँदैन। यो link Save वा Submit मा समावेश हुँदैन।</p>
-          <p id="cobMicrosoftStatus" role="status" aria-live="polite"></p>
-          <iframe id="cobMicrosoftFrame" title="Microsoft Word embedded document" referrerpolicy="no-referrer" allowfullscreen hidden></iframe>`;
-        wordRibbon.after(microsoftPanel);
-        const microsoftInput = microsoftPanel.querySelector("#cobMicrosoftEmbed"),
-          microsoftEdit = microsoftPanel.querySelector("#cobMicrosoftEdit"),
-          microsoftFrame = microsoftPanel.querySelector("iframe"),
-          microsoftOpen = microsoftPanel.querySelector("#cobMicrosoftOpen"),
-          microsoftStatus = microsoftPanel.querySelector("#cobMicrosoftStatus");
-        let microsoftEmbedUrl = "";
-        function microsoftUrl(value, embedOnly) {
-          const url = new URL(value), host = url.hostname.toLowerCase();
-          if (url.protocol !== "https:" || url.username || url.password || (url.port && url.port !== "443")) throw new Error("invalid");
-          const oneDrive = host === "onedrive.live.com",
-            office = host.endsWith(".officeapps.live.com"),
-            sharePoint = host.endsWith(".sharepoint.com");
-          if (embedOnly) {
-            const valid = (oneDrive && /^\/embed\/?$/i.test(url.pathname)) ||
-              (office && /\/(?:embed\.aspx|wordviewerframe\.aspx)$/i.test(url.pathname)) ||
-              (sharePoint && /\/_layouts\/15\/Doc\.aspx$/i.test(url.pathname) && url.searchParams.get("action")?.toLowerCase() === "embedview");
-            if (!valid) throw new Error("embed");
-          } else if (!(oneDrive || office || sharePoint || host === "1drv.ms" || host === "word.cloud.microsoft" || host === "www.office.com" || host === "word.office.com")) throw new Error("host");
-          return url.href;
-        }
-        function resetMicrosoftEmbed() {
-          microsoftEmbedUrl = "";
-          microsoftInput.value = "";
-          microsoftEdit.value = "";
-          microsoftFrame.removeAttribute("src");
-          microsoftFrame.hidden = true;
-          microsoftOpen.removeAttribute("href");
-          microsoftOpen.hidden = true;
-          microsoftStatus.textContent = "";
-        }
-        microsoftPanel.querySelector("#cobMicrosoftLoad").addEventListener("click", function () {
-          try {
-            let value = microsoftInput.value.trim();
-            if (value.startsWith("<")) {
-              const template = document.createElement("template");
-              template.innerHTML = value;
-              const frames = template.content.querySelectorAll("iframe");
-              if (frames.length !== 1) throw new Error("iframe");
-              value = frames[0].getAttribute("src") || "";
-            }
-            const embed = microsoftUrl(value, true),
-              edit = microsoftEdit.value.trim() ? microsoftUrl(microsoftEdit.value.trim(), false) : embed;
-            microsoftEmbedUrl = embed;
-            microsoftFrame.src = embed;
-            microsoftFrame.hidden = false;
-            microsoftOpen.href = edit;
-            microsoftOpen.hidden = false;
-            microsoftStatus.textContent = "Microsoft viewer खोल्ने अनुरोध पठाइयो। नखुलेमा link र sharing अनुमति जाँच्नुहोस् वा Microsoft Word मा खोल्नुहोस्।";
-          } catch (error) {
-            microsoftStatus.textContent = "मान्य Microsoft Embed code / HTTPS embed URL राख्नुहोस्। सामान्य sharing link मात्रले embed खुल्दैन; वैकल्पिक editing link पनि Microsoft कै हुनुपर्छ।";
-          }
-        });
-        microsoftPanel.querySelector("#cobMicrosoftLocalDocx").addEventListener("click", function () { b.querySelector("#cobDocx").click(); });
-        function setPreviewMode(mode) {
-          previewMode.value = ["word", "microsoft"].includes(mode) ? mode : "existing";
-          b.classList.toggle("cob-word-mode", previewMode.value === "word");
-          wordRibbon.hidden = previewMode.value !== "word";
-          const embedded = previewMode.value === "microsoft";
-          b.classList.toggle("cob-microsoft-mode", embedded);
-          microsoftPanel.hidden = !embedded;
-          if (embedded && microsoftEmbedUrl) microsoftFrame.src = microsoftEmbedUrl;
-          else microsoftFrame.removeAttribute("src");
-        }
-        previewMode.addEventListener("change", function () { setPreviewMode(previewMode.value); });
-        function markWordBlocks() {
-          w.querySelectorAll("p,li,[data-docx-p],.cob-main-body > div").forEach(function (block) {
-            block.dataset.wordRich = "1";
-          });
-        }
-        w.addEventListener("input", function () {
-          if (previewMode.value === "word" || w.querySelector('[data-word-rich="1"]')) markWordBlocks();
-        });
-        wordRibbon.addEventListener("mousedown", function (event) {
-          if (event.target.closest("button")) event.preventDefault();
-        });
-        function wordAction(control) {
-          if (control.hasAttribute("data-word-download")) {
-            b.querySelector("#cobDocx").click();
-            return;
-          }
-          const status = wordRibbon.querySelector(".cob-word-status");
-          if (!savedDraftRange || !w.contains(savedDraftRange.commonAncestorContainer)) {
-            status.textContent = "पहिले कागजातमा cursor राख्नुहोस् वा text छान्नुहोस्।";
-            return;
-          }
-          w.focus({ preventScroll: true });
-          restoreDraftRange();
-          if (control.dataset.wordTool) applyParagraphTool(control.dataset.wordTool);
-          else if (control.dataset.wordAlign || control.hasAttribute("data-word-spacing")) {
-            selectedDraftBlocks().forEach(function (block) {
-              if (control.dataset.wordAlign) block.style.textAlign = control.dataset.wordAlign;
-              else block.style.lineHeight = control.value;
-            });
-          } else {
-            document.execCommand("styleWithCSS", false, true);
-            if (control.hasAttribute("data-word-size")) {
-              document.execCommand("fontSize", false, "7");
-              w.querySelectorAll('font[size="7"],span[style]').forEach(function (span) {
-                if (span.getAttribute("size") === "7" || span.style.fontSize === "xxx-large") {
-                  span.removeAttribute("size"); span.style.fontSize = control.value + "pt";
-                }
-              });
-            } else document.execCommand(control.dataset.wordCommand, false, control.value || null);
-          }
-          markWordBlocks();
-          rememberDraftRange();
-          w.dispatchEvent(new Event("input", { bubbles: true }));
-          status.textContent = "Formatting लागू भयो। Save वा Download .docx गर्न सक्नुहुन्छ।";
-        }
-        wordRibbon.querySelectorAll("button").forEach(function (control) {
-          control.addEventListener("click", function () { wordAction(control); });
-        });
-        wordRibbon.querySelectorAll("select,input").forEach(function (control) {
-          control.addEventListener("change", function () { wordAction(control); });
-        });
         let T = null,
           j = "none",
           A = "",
@@ -432,6 +268,53 @@
         function setToolsStatus(message) {
           toolsStatus.textContent = message || "";
         }
+        let copiedFormat = null;
+        const painter = document.createElement("fieldset");
+        painter.className = "cob-format-painter";
+        painter.innerHTML = '<legend>Format Painter</legend><button type="button" id="cobCopyFormat">Copy format</button><button type="button" id="cobApplyFormat" disabled>Apply format</button><small>पहिले source text मा cursor राखेर Copy format गर्नुहोस्। त्यसपछि target text छानेर Apply format गर्नुहोस्। Text नछानेमा पूरा paragraph मा लागू हुन्छ।</small>';
+        toolsPanel.querySelector(".cob-size-control").before(painter);
+        const inlineFormatProperties = ["fontFamily", "fontSize", "fontWeight", "fontStyle", "textDecoration", "color", "backgroundColor", "verticalAlign"],
+          paragraphFormatProperties = ["textAlign", "lineHeight", "marginTop", "marginBottom"];
+        painter.querySelectorAll("button").forEach(function (button) { button.addEventListener("mousedown", function (event) { event.preventDefault(); }); });
+        painter.querySelector("#cobCopyFormat").addEventListener("click", function () {
+          const range = restoreDraftRange();
+          if (!range || !w.contains(range.startContainer)) { setToolsStatus("पहिले source text मा cursor राख्नुहोस् वा text छान्नुहोस्।"); return; }
+          let source = range.startContainer.nodeType === 1 ? range.startContainer.childNodes[range.startOffset] || range.startContainer : range.startContainer;
+          if (source.nodeType !== 1) source = source.parentElement;
+          const block = draftBlockForNode(source), style = getComputedStyle(source), blockStyle = getComputedStyle(block || source);
+          copiedFormat = { inline: {}, paragraph: {} };
+          inlineFormatProperties.forEach(function (key) { copiedFormat.inline[key] = style[key]; });
+          paragraphFormatProperties.forEach(function (key) { copiedFormat.paragraph[key] = blockStyle[key]; });
+          painter.querySelector("#cobApplyFormat").disabled = false;
+          setToolsStatus("Format copied। अब target text छानेर Apply format गर्नुहोस्।");
+        });
+        painter.querySelector("#cobApplyFormat").addEventListener("click", function () {
+          const range = restoreDraftRange();
+          if (!copiedFormat || !range || !w.contains(range.commonAncestorContainer)) { setToolsStatus("पहिले format copy गरी target text छान्नुहोस्।"); return; }
+          const blocks = selectedDraftBlocks();
+          if (!blocks.length) return;
+          const target = range.cloneRange();
+          if (target.collapsed) target.selectNodeContents(blocks[0]);
+          const walker = document.createTreeWalker(w, NodeFilter.SHOW_TEXT), texts = [];
+          let node;
+          while ((node = walker.nextNode())) {
+            if (!node.nodeValue || node.parentElement.closest('[data-cob-list-marker],[contenteditable="false"]') || !target.intersectsNode(node)) continue;
+            const start = node === target.startContainer ? target.startOffset : 0,
+              end = node === target.endContainer ? target.endOffset : node.length;
+            if (end > start) texts.push({ node: node, start: start, end: end });
+          }
+          texts.reverse().forEach(function (part) {
+            const span = document.createElement("span");
+            Object.assign(span.style, copiedFormat.inline);
+            if (part.end < part.node.length) part.node.splitText(part.end);
+            const text = part.start ? part.node.splitText(part.start) : part.node;
+            text.parentNode.insertBefore(span, text); span.appendChild(text);
+          });
+          blocks.forEach(function (block) { Object.assign(block.style, copiedFormat.paragraph); });
+          rememberDraftRange();
+          w.dispatchEvent(new Event("input", { bubbles: true }));
+          setToolsStatus("Format लागू भयो। Text र numbering यथावत् छन्।");
+        });
         const numberingTools = document.createElement("fieldset");
         numberingTools.className = "cob-numbering-tools";
         numberingTools.innerHTML = `<legend>Auto numbering / Sub-numbering</legend>
@@ -466,7 +349,8 @@
             parts[last] = String(Number(parts[last]) + state.count++);
             let marker = listMarker(block);
             if (!marker) { setBlockList(block, "number"); marker = listMarker(block); }
-            marker.textContent = numberLabel(state.format, parts.join(".")) + "\u00a0";
+            marker.textContent = numberLabel(state.format, parts.join(".")) + "\t";
+            updateBlockIndent(block);
           });
         }
         numberingTools.querySelector("#cobNumberApply").addEventListener("click", function () {
@@ -494,14 +378,24 @@
               Math.min(6, Number(block.dataset.cobTab || 0)),
             ),
             listLevel =
-              "subbullet" === block.dataset.cobList
+              block.dataset.cobList === "number"
+                ? (block.dataset.cobNumberStyle === "hierarchical" ? (block.dataset.cobNumberStart || "1.1").split(".").length : 1)
+                : "subbullet" === block.dataset.cobList
                 ? 2
-                : ["bullet", "number"].includes(block.dataset.cobList)
+                : "bullet" === block.dataset.cobList
                   ? 1
                   : 0,
             totalLevel = tabLevel + listLevel;
           block.dataset.cobTab = String(tabLevel);
           block.dataset.docxLeft = String(totalLevel * 720);
+          if (block.dataset.cobList === "number") {
+            if (!block.dataset.cobNumberHanging) block.dataset.cobNumberOriginalIndent = block.style.textIndent || "";
+            block.dataset.cobNumberHanging = "1";
+            block.style.textIndent = "-36pt";
+          } else if (block.dataset.cobNumberHanging) {
+            block.style.textIndent = block.dataset.cobNumberOriginalIndent || "";
+            delete block.dataset.cobNumberHanging; delete block.dataset.cobNumberOriginalIndent;
+          }
           totalLevel
             ? (block.style.marginLeft = totalLevel * 36 + "pt")
             : block.style.removeProperty("margin-left");
@@ -523,7 +417,7 @@
             block.insertBefore(marker, block.firstChild);
           }
           block.dataset.cobList = mode;
-          marker.textContent = mode === "number" ? numberLabel(block.dataset.cobNumberStyle || "decimal", block.dataset.cobNumberStart || "1") + "\u00a0" : "subbullet" === mode ? "◦\u00a0" : "•\u00a0";
+          marker.textContent = mode === "number" ? numberLabel(block.dataset.cobNumberStyle || "decimal", block.dataset.cobNumberStart || "1") + "\t" : "subbullet" === mode ? "◦\u00a0" : "•\u00a0";
           updateBlockIndent(block);
         }
         function applyParagraphTool(tool) {
@@ -1291,7 +1185,6 @@
             !1 !== e && w.focus());
         }
         function re() {
-          microsoftFrame.removeAttribute("src");
           (setToolsOpen(!1),
             b.classList.remove("cob-open"),
             (document.body.style.overflow = ""),
@@ -1493,14 +1386,14 @@
             line = Math.round((parseFloat(style.lineHeight) / parseFloat(style.fontSize) || 1.15) * 240),
             left = Math.max(0, Number(element.dataset.docxLeft || 0)),
             first = Math.round(parseFloat(style.textIndent) * 15 || 0),
-            tabs = element.matches(".cob-party,.cob-iti") ? '<w:tabs><w:tab w:val="right" w:leader="dot" w:pos="' + (g.value === "फैसला" ? 9224 : 9638) + '"/></w:tabs>' : "";
+            tabs = element.dataset.cobList === "number" ? '<w:tabs><w:tab w:val="left" w:pos="' + left + '"/></w:tabs>' : element.matches(".cob-party,.cob-iti") ? '<w:tabs><w:tab w:val="right" w:leader="dot" w:pos="' + (g.value === "फैसला" ? 9224 : 9638) + '"/></w:tabs>' : "";
           const before = Math.max(0, Math.round(parseFloat(style.marginTop) * 15 || 0)),
             after = Math.max(0, Math.round(parseFloat(style.marginBottom) * 15 || 0)),
             nodes = Array.from(contentNodes || element.childNodes);
           // A lone BR is the browser placeholder for an empty paragraph.
           // All other BRs, including consecutive/trailing breaks, are explicit.
           if (nodes.length === 1 && nodes[0].nodeName === "BR") nodes.pop();
-          return '<w:p><w:pPr>' + tabs + '<w:jc w:val="' + align + '"/><w:spacing w:line="' + line + '" w:lineRule="auto" w:before="' + before + '" w:after="' + after + '"/><w:ind w:left="' + left + '" w:firstLine="' + Math.max(0, first) + '"/></w:pPr>' + nodes.map(runs).join("") + '</w:p>';
+          return '<w:p><w:pPr>' + tabs + '<w:jc w:val="' + align + '"/><w:spacing w:line="' + line + '" w:lineRule="auto" w:before="' + before + '" w:after="' + after + '"/><w:ind w:left="' + left + (element.dataset.cobList === "number" ? '" w:hanging="720' : '" w:firstLine="' + Math.max(0, first)) + '"/></w:pPr>' + nodes.map(runs).join("") + '</w:p>';
         }
         function draftDocxBlocks(root) {
           const blocks = [], blockSelector = "p,div,li,section,article,h1,h2,h3,h4,h5,h6,blockquote,pre,ul,ol";
@@ -1931,15 +1824,14 @@
                                   ? "full"
                                   : "none"));
                           }
-                          (resetMicrosoftEmbed(),
-                            setPreviewMode("existing"),
-                            (savedDraftRange = null),
+                          ((savedDraftRange = null),
                             Z(),
                             Q(),
                             b.classList.add("cob-open"),
                             (document.body.style.overflow = "hidden"),
                             oe(!1, null),
                             n && n.draftHtml && (w.innerHTML = ee(n.draftHtml)),
+                            refreshNumbering(),
                             applyPreviewFontSize(
                               n && n.fontSize ? n.fontSize : 13,
                               !1,

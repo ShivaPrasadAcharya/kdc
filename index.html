@@ -2525,7 +2525,7 @@
         const style = doc.createElement("link");
         style.id = "court-order-builder-style";
         style.rel = "stylesheet";
-        style.href = "cause-list-runtime.css?v=12";
+        style.href = "cause-list-runtime.css?v=13";
         head.appendChild(style);
         const syncStyle = doc.createElement("link");
         syncStyle.id = "cause-list-firebase-sync-style";
@@ -2549,8 +2549,8 @@
         (doc.body || doc.documentElement).appendChild(dateLibrary);
         const runtime = doc.createElement("script");
         runtime.id = "court-order-builder-runtime";
-        runtime.setAttribute("data-version", "12");
-        runtime.src = "cause-list-runtime.js?v=12";
+        runtime.setAttribute("data-version", "13");
+        runtime.src = "cause-list-runtime.js?v=13";
         (doc.body || doc.documentElement).appendChild(runtime);
         const proofreaderRuntime = doc.createElement("script");
         proofreaderRuntime.id = "nepali-proofreader-engine-runtime";
