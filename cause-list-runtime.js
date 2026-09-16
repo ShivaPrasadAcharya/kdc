@@ -142,13 +142,14 @@
           b = document.createElement("div");
         ((b.className = "cob-backdrop"),
           (b.innerHTML =
-            '<section class="cob-modal" role="dialog" aria-modal="true" aria-labelledby="cobTitle"><header class="cob-head"><h2 id="cobTitle">नेपाली अदालती आदेश/फैसला</h2><button class="cob-close" type="button" aria-label="बन्द गर्नुहोस्">×</button></header><div class="cob-body"><div class="cob-controls"><div class="cob-field"><label for="cobType">कागजातको प्रकार</label><select id="cobType"><option>आदेश</option><option>अन्तिम आदेश</option><option>फैसला</option><option>कसूर_सजाय</option></select></div><div class="cob-field"><label for="cobJudge">श्रीमान्</label><select id="cobJudge"></select></div><div class="cob-field cob-wide"><label for="cobPartyStatus">पक्षहरूको हैसियत</label><div class="cob-party-control"><select id="cobPartyStatus"><option value="वादी|प्रतिवादी">वादी, प्रतिवादी</option><option value="निवेदक|विपक्षी">निवेदक, विपक्षी</option><option value="पुनरावेदक|प्रत्यर्थी">पुनरावेदक, प्रत्यर्थी</option><option value="निवेदक/वादी|विपक्षी/प्रतिवादी">निवेदक/वादी, विपक्षी/प्रतिवादी</option><option value="निवेदक/प्रतिवादी|विपक्षी/वादी">निवेदक/प्रतिवादी, विपक्षी/वादी</option><option value="निवेदक/वादी|विपक्षी">निवेदक/वादी, विपक्षी</option><option value="निवेदक/प्रतिवादी|विपक्षी">निवेदक/प्रतिवादी, विपक्षी</option><option value="निवेदक|विपक्षी/वादी">निवेदक, विपक्षी/वादी</option><option value="निवेदक|विपक्षी/प्रतिवादी">निवेदक, विपक्षी/प्रतिवादी</option><option value="पुनरावेदक/वादी|प्रत्यर्थी/प्रतिवादी">पुनरावेदक/वादी, प्रत्यर्थी/प्रतिवादी</option><option value="पुनरावेदक/प्रतिवादी|प्रत्यर्थी/वादी">पुनरावेदक/प्रतिवादी, प्रत्यर्थी/वादी</option></select><button type="button" class="cob-reverse" id="cobReverse" data-active="0" aria-pressed="false"><span>Reverse</span><span class="cob-reverse-mark" id="cobReverseMark" aria-hidden="true">✕</span></button></div></div><div class="cob-summary" id="cobSummary" aria-label="मुद्दाको स्वतः प्राप्त विवरण"></div><div class="cob-field cob-wide"><label for="cobRemarks">कैफियत</label><textarea id="cobRemarks" placeholder="आदेश वा फैसलाको व्यहोरा यहाँ लेख्नुहोस्"></textarea></div></div><p class="cob-note">मुद्दाको विवरण source row बाट स्वतः लिइन्छ। कैफियत मात्र सम्पादनयोग्य content field हो।</p><div class="cob-actions"><button type="button" class="cob-btn cob-primary" id="cobGenerate">मस्यौदा तयार गर्नुहोस्</button><button type="button" class="cob-btn" id="cobTools">Tools</button><button type="button" class="cob-btn" id="cobSave">सुरक्षित गर्नुहोस्</button><button type="button" class="cob-btn" id="cobCopy">Copy</button><button type="button" class="cob-btn" id="cobDocx">Download .docx</button><button type="button" class="cob-btn" id="cobPrint">Print</button><span class="cob-save-status" id="cobSaveStatus" role="status" aria-live="polite"></span></div><aside class="cob-tools-panel" id="cobToolsPanel" aria-label="Preview formatting tools" hidden><div class="cob-tools-head"><strong>Preview Tools</strong><button type="button" class="cob-tools-close" aria-label="Tools बन्द गर्नुहोस्">×</button></div><p class="cob-tools-help">Cursor राख्नुहोस् वा line/paragraph छान्नुहोस्। Ascend/Descend ले bullet नहटाई indent मात्र बदल्छ।</p><div class="cob-tools-grid"><button type="button" data-cob-tool="tab-remove" title="Tab घटाई माथिल्लो indent level मा लैजानुहोस्">← Ascend indent</button><button type="button" data-cob-tool="tab-add" title="Tab थपेर तल्लो indent level मा लैजानुहोस्">Descend indent →</button><button type="button" data-cob-tool="bullet-add">+ Bullet</button><button type="button" data-cob-tool="bullet-remove">− Bullet</button><button type="button" data-cob-tool="subbullet-add">+ Subbullet</button><button type="button" data-cob-tool="subbullet-remove">− Subbullet</button></div><label class="cob-size-control" for="cobFontSize"><span>Text size</span><output id="cobFontSizeValue">13 pt</output><input id="cobFontSize" type="range" min="9" max="24" step="0.5" value="13"></label><p class="cob-tools-status" id="cobToolsStatus" aria-live="polite"></p></aside><div class="cob-draft-wrap" id="cobDraftWrap"><div class="cob-draft" id="cobDraft" contenteditable="true" spellcheck="true" data-cob-font-size="13"></div></div></div></section>'),
+            '<section class="cob-modal" role="dialog" aria-modal="true" aria-labelledby="cobTitle"><header class="cob-head"><h2 id="cobTitle">नेपाली अदालती आदेश/फैसला</h2><button class="cob-close" type="button" aria-label="बन्द गर्नुहोस्">×</button></header><div class="cob-body"><div class="cob-controls"><div class="cob-field"><label for="cobType">कागजातको प्रकार</label><select id="cobType"><option>आदेश</option><option>अन्तिम आदेश</option><option>फैसला</option><option>कसूर_सजाय</option></select></div><div class="cob-field"><label for="cobVersusLayout">विरुद्ध खण्ड</label><select id="cobVersusLayout"><option value="leader">ट्याब लिडरसहित</option><option value="stacked">ट्याब लिडरबिना</option></select></div><div class="cob-field"><label for="cobJudge">श्रीमान्</label><select id="cobJudge"></select></div><div class="cob-field cob-wide"><label for="cobPartyStatus">पक्षहरूको हैसियत</label><div class="cob-party-control"><select id="cobPartyStatus"><option value="वादी|प्रतिवादी">वादी, प्रतिवादी</option><option value="निवेदक|विपक्षी">निवेदक, विपक्षी</option><option value="पुनरावेदक|प्रत्यर्थी">पुनरावेदक, प्रत्यर्थी</option><option value="निवेदक/वादी|विपक्षी/प्रतिवादी">निवेदक/वादी, विपक्षी/प्रतिवादी</option><option value="निवेदक/प्रतिवादी|विपक्षी/वादी">निवेदक/प्रतिवादी, विपक्षी/वादी</option><option value="निवेदक/वादी|विपक्षी">निवेदक/वादी, विपक्षी</option><option value="निवेदक/प्रतिवादी|विपक्षी">निवेदक/प्रतिवादी, विपक्षी</option><option value="निवेदक|विपक्षी/वादी">निवेदक, विपक्षी/वादी</option><option value="निवेदक|विपक्षी/प्रतिवादी">निवेदक, विपक्षी/प्रतिवादी</option><option value="पुनरावेदक/वादी|प्रत्यर्थी/प्रतिवादी">पुनरावेदक/वादी, प्रत्यर्थी/प्रतिवादी</option><option value="पुनरावेदक/प्रतिवादी|प्रत्यर्थी/वादी">पुनरावेदक/प्रतिवादी, प्रत्यर्थी/वादी</option></select><button type="button" class="cob-reverse" id="cobReverse" data-active="0" aria-pressed="false"><span>Reverse</span><span class="cob-reverse-mark" id="cobReverseMark" aria-hidden="true">✕</span></button></div></div><div class="cob-summary" id="cobSummary" aria-label="मुद्दाको स्वतः प्राप्त विवरण"></div><div class="cob-field cob-wide"><label for="cobRemarks">कैफियत</label><textarea id="cobRemarks" placeholder="आदेश वा फैसलाको व्यहोरा यहाँ लेख्नुहोस्"></textarea></div></div><p class="cob-note">मुद्दाको विवरण source row बाट स्वतः लिइन्छ। कैफियत मात्र सम्पादनयोग्य content field हो।</p><div class="cob-actions"><button type="button" class="cob-btn cob-primary" id="cobGenerate">मस्यौदा तयार गर्नुहोस्</button><button type="button" class="cob-btn" id="cobTools">Tools</button><button type="button" class="cob-btn" id="cobSave">सुरक्षित गर्नुहोस्</button><button type="button" class="cob-btn" id="cobCopy">Copy</button><button type="button" class="cob-btn" id="cobDocx">Download .docx</button><button type="button" class="cob-btn" id="cobPrint">Print</button><span class="cob-save-status" id="cobSaveStatus" role="status" aria-live="polite"></span></div><aside class="cob-tools-panel" id="cobToolsPanel" aria-label="Preview formatting tools" hidden><div class="cob-tools-head"><strong>Preview Tools</strong><button type="button" class="cob-tools-close" aria-label="Tools बन्द गर्नुहोस्">×</button></div><p class="cob-tools-help">Cursor राख्नुहोस् वा line/paragraph छान्नुहोस्। Ascend/Descend ले bullet नहटाई indent मात्र बदल्छ।</p><div class="cob-tools-grid"><button type="button" data-cob-tool="tab-remove" title="Tab घटाई माथिल्लो indent level मा लैजानुहोस्">← Ascend indent</button><button type="button" data-cob-tool="tab-add" title="Tab थपेर तल्लो indent level मा लैजानुहोस्">Descend indent →</button><button type="button" data-cob-tool="bullet-add">+ Bullet</button><button type="button" data-cob-tool="bullet-remove">− Bullet</button><button type="button" data-cob-tool="subbullet-add">+ Subbullet</button><button type="button" data-cob-tool="subbullet-remove">− Subbullet</button></div><label class="cob-size-control" for="cobFontSize"><span>Text size</span><output id="cobFontSizeValue">13 pt</output><input id="cobFontSize" type="range" min="9" max="24" step="0.5" value="13"></label><p class="cob-tools-status" id="cobToolsStatus" aria-live="polite"></p></aside><div class="cob-draft-wrap" id="cobDraftWrap"><div class="cob-draft" id="cobDraft" contenteditable="true" spellcheck="true" data-cob-font-size="13"></div></div></div></section>'),
           document.body.appendChild(b));
         const w = b.querySelector("#cobDraft"),
           h = b.querySelector("#cobRemarks"),
           g = b.querySelector("#cobType"),
           y = b.querySelector("#cobJudge"),
           v = b.querySelector("#cobPartyStatus"),
+          versusSelect = b.querySelector("#cobVersusLayout"),
           x = b.querySelector("#cobReverse"),
           C = b.querySelector("#cobReverseMark"),
           S = b.querySelector("#cobSummary"),
@@ -955,6 +956,21 @@
             "</span></p>"
           );
         }
+        function partyBlock(name, role, layout) {
+          if ("stacked" !== layout) return X(name, role);
+          const partyName = name || n;
+          return (
+            '<p data-docx-p="1" data-align="left" data-bold="0" data-underline="1" data-first-line="0" class="cob-left cob-underline cob-party-stacked-role">' +
+            s(role) +
+            '</p><p data-docx-p="1" data-align="left" data-bold="0" data-underline="0" data-first-line="0" data-party="1" data-party-layout="stacked" data-party-name="' +
+            s(partyName) +
+            '" data-party-role="' +
+            s(role) +
+            '" class="cob-party cob-party-stacked-name"><span class="cob-party-name">' +
+            s(partyName) +
+            "</span></p>"
+          );
+        }
         function Z() {
           reverseOptions
             .querySelectorAll("[data-reverse-mode]")
@@ -1067,6 +1083,8 @@
             N = namesReversed ? T.plaintiff : T.defendant,
             E = rolesReversed ? S : C,
             k = rolesReversed ? C : S,
+            versusLayout =
+              "stacked" === versusSelect.value ? "stacked" : "leader",
             hasPreservedBody = "string" == typeof preservedBody,
             mainBodyHtml = hasPreservedBody
               ? ee(preservedBody)
@@ -1154,9 +1172,10 @@
               underline: !0,
             })),
             (A += V("", { blank: !0 })),
-            (A += X(L, E)),
-            (A += V("विरुद्ध", { align: "center", versus: !0 })),
-            (A += X(N, k)),
+            (A += partyBlock(L, E, versusLayout)),
+            "leader" === versusLayout &&
+              (A += V("विरुद्ध", { align: "center", versus: !0 })),
+            (A += partyBlock(N, k, versusLayout)),
             (A += V("", { blank: !0 })),
             (A +=
               '<div class="cob-main-body" data-cob-main-body="1">' +
@@ -1386,7 +1405,7 @@
             line = Math.round((parseFloat(style.lineHeight) / parseFloat(style.fontSize) || 1.15) * 240),
             left = Math.max(0, Number(element.dataset.docxLeft || 0)),
             first = Math.round(parseFloat(style.textIndent) * 15 || 0),
-            tabs = element.dataset.cobList === "number" ? '<w:tabs><w:tab w:val="left" w:pos="' + left + '"/></w:tabs>' : element.matches(".cob-party,.cob-iti") ? '<w:tabs><w:tab w:val="right" w:leader="dot" w:pos="' + (g.value === "फैसला" ? 9224 : 9638) + '"/></w:tabs>' : "";
+            tabs = element.dataset.cobList === "number" ? '<w:tabs><w:tab w:val="left" w:pos="' + left + '"/></w:tabs>' : element.querySelector(".cob-party-leader,.cob-iti-leader") ? '<w:tabs><w:tab w:val="right" w:leader="dot" w:pos="' + (g.value === "फैसला" ? 9224 : 9638) + '"/></w:tabs>' : "";
           const before = Math.max(0, Math.round(parseFloat(style.marginTop) * 15 || 0)),
             after = Math.max(0, Math.round(parseFloat(style.marginBottom) * 15 || 0)),
             nodes = Array.from(contentNodes || element.childNodes);
@@ -1432,6 +1451,7 @@
               documentType: g.value,
               judge: y.value,
               partyStatus: v.value,
+              versusLayout: versusSelect.value,
               reverseMode: j,
               reverse: "none" !== j,
               remarks: h.value,
@@ -1643,6 +1663,9 @@
           v.addEventListener("change", function () {
             (ae(), T && oe(!1, preservedMainBodyHtml()));
           }),
+          versusSelect.addEventListener("change", function () {
+            (ae(), T && oe(!1, preservedMainBodyHtml()));
+          }),
           reverseOptions.addEventListener("click", function (e) {
             const t = e.target.closest("[data-reverse-mode]");
             t &&
@@ -1791,6 +1814,7 @@
                             (v.value = f(m(e.rawCase).caseNo)
                               ? "निवेदक|विपक्षी"
                               : "वादी|प्रतिवादी"),
+                            (versusSelect.value = "leader"),
                             (j = "none"),
                             (h.value = ""),
                             n && "object" == typeof n)
@@ -1816,6 +1840,8 @@
                             (Array.from(v.options).some(function (e) {
                               return e.value === n.partyStatus;
                             }) && (v.value = n.partyStatus),
+                              ["leader", "stacked"].includes(n.versusLayout) &&
+                                (versusSelect.value = n.versusLayout),
                               (j = ["none", "partial", "full"].includes(
                                 n.reverseMode,
                               )

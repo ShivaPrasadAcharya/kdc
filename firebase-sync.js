@@ -1451,6 +1451,8 @@
       partyStatus:
         (backdrop.querySelector("#cobPartyStatus") || {}).value ||
         "वादी|प्रतिवादी",
+      versusLayout:
+        (backdrop.querySelector("#cobVersusLayout") || {}).value || "leader",
       reverseMode: active ? active.dataset.reverseMode : "none",
       draftHtml: draft ? draft.innerHTML : "",
       fontSize: draft ? Number(draft.dataset.cobFontSize || 13) : 13,
@@ -1495,6 +1497,7 @@
     try {
       const type = backdrop.querySelector("#cobType"),
         party = backdrop.querySelector("#cobPartyStatus"),
+        versusLayout = backdrop.querySelector("#cobVersusLayout"),
         draft = backdrop.querySelector("#cobDraft");
       if (type && state.documentType && type.value !== state.documentType) {
         type.value = state.documentType;
@@ -1503,6 +1506,14 @@
       if (party && state.partyStatus && party.value !== state.partyStatus) {
         party.value = state.partyStatus;
         party.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      if (
+        versusLayout &&
+        ["leader", "stacked"].includes(state.versusLayout) &&
+        versusLayout.value !== state.versusLayout
+      ) {
+        versusLayout.value = state.versusLayout;
+        versusLayout.dispatchEvent(new Event("change", { bubbles: true }));
       }
       const mode = ["none", "partial", "full"].includes(state.reverseMode)
           ? state.reverseMode
@@ -2980,7 +2991,7 @@
     if (
       event.target.closest &&
       event.target.closest(".cob-backdrop") &&
-      ["cobType", "cobPartyStatus"].includes(event.target.id)
+      ["cobType", "cobPartyStatus", "cobVersusLayout"].includes(event.target.id)
     ) {
       if (!applyingRemote) rememberDraftPosition(true);
       queueDraft();
