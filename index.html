@@ -954,7 +954,7 @@
   <main>
     <div class="intro">
       <div>
-        <h2>Source code राख्नुहोस्, filter गर्नुहोस् र तुरुन्त डाउनलोड गर्नुहोस्</h2>
+        <h2>मिति राख्नुहोस्, पेशी सूची ल्याउनुहोस् र आदेश तयार गर्नुहोस्</h2>
         <p>यो उपकरणले मूल UI, CSS, JavaScript, form र page structure सुरक्षित राख्दै अन्य न्यायाधीशका summary row तथा इजलास विवरण हटाउँछ र कैफियत column मा नेपाली अदालती आदेश बनाउने सुविधा थप्छ।</p>
       </div>
       <div class="privacy-note" title="फाइल बाह्य server मा पठाइँदैन">● Browser भित्रै प्रशोधन हुन्छ</div>
@@ -975,12 +975,12 @@
 
         <div class="panel-body">
           <div class="date-loader">
-            <label for="causeDateSearch">मितिअनुसार पेशी सूची खोज्नुहोस्</label>
+            <label for="causeDateSearch">अदालतबाट मितिअनुसार पेशी सूची ल्याउनुहोस्</label>
             <div class="date-loader-row">
               <input id="causeDateSearch" inputmode="numeric" autocomplete="off" placeholder="२०८३।०४।१५ वा 20830415" aria-describedby="causeDateHint">
-              <button type="button" class="btn btn-subtle" id="causeDateSearchBtn">पेशी सूची खोज्नुहोस्</button>
+              <button type="button" class="btn btn-subtle" id="causeDateSearchBtn">पेशी सूची ल्याउनुहोस्</button>
             </div>
-            <small id="causeDateHint">मिति YYYYMMDD वा YYYY।MM।DD मा लेख्नुहोस्। सम्बन्धित source फाइल indexYYYYMMDD.html बाट खुल्छ।</small>
+            <small id="causeDateHint">मिति YYYYMMDD वा YYYY-MM-DD मा लेख्नुहोस्; नेपाली अंक पनि चल्छ। अदालतको वेबसाइटबाट सो मितिको सूची ल्याएर छानिएको न्यायाधीशको output स्वतः तयार हुन्छ।</small>
           </div>
 
           <div id="uploadPane" class="hidden" role="tabpanel" aria-labelledby="uploadTab">
@@ -1028,7 +1028,7 @@
             <button type="button" class="btn btn-primary" id="filterBtn">शिवप्रसाद आचार्यको data मात्र राख्नुहोस्</button>
             <button type="button" class="btn" id="clearBtn" disabled>खाली गर्नुहोस्</button>
           </div>
-          <div class="status" id="inputStatus" role="status" aria-live="polite">HTML वा TXT फाइल छान्नुहोस्, अथवा code paste गर्नुहोस्।</div>
+          <div class="status" id="inputStatus" role="status" aria-live="polite">मिति राखेर पेशी सूची ल्याउनुहोस्, वा HTML/TXT upload अथवा code paste गर्नुहोस्।</div>
         </div>
       </article>
 
@@ -1099,6 +1099,7 @@
       const BS_MONTH_NAMES = ["वैशाख", "जेठ", "असार", "साउन", "भदौ", "असोज", "कात्तिक", "मंसिर", "पुस", "माघ", "फागुन", "चैत"];
       const CAUSE_LIST_CACHE_KEY = "cause-list-auto-files-v1";
       const INPUT_HISTORY_KEY = "cause-list-input-history-v1";
+      const COURT_SOURCE_API_URL = "https://kdc-court-source-api.spacharya43.chatgpt.site/api/cause-list";
 
       // Nepali spelling variants, digits and optional spaces are unified only for search.
       const NepaliNormalizer = {
@@ -1254,6 +1255,8 @@
       });
 
       let sourceCode = "";
+      let causeDateLoadController = null;
+      let causeDateLoadSequence = 0;
       let outputCode = "";
       let loadedCauseDateKey = "";
       let monthlyOutputs = [];
@@ -2298,21 +2301,75 @@
 
       async function loadCauseListByDate() {
         const dateKey = compactBsDate(causeDateSearch.value);
-        if (!dateKey) {
+        if (!dateKey || !/^[०-९0-9\s।./_-]+$/.test(causeDateSearch.value.trim())) {
           showInputError("मिति YYYYMMDD वा YYYY।MM।DD ढाँचामा लेख्नुहोस्।");
           causeDateSearch.focus();
           return;
         }
-        const page = causeListPages.find((item) => item.dateKey === dateKey);
-        const filename = page ? page.href : causeListFilename(dateKey);
+        cancelCourtSourceLoad();
+        const sequence = ++causeDateLoadSequence;
+        const controller = new AbortController();
+        causeDateLoadController = controller;
         causeDateSearch.value = dateKey;
-        if (page) {
-          window.location.href = filename;
-          return;
+        causeDateSearchBtn.disabled = true;
+        causeDateSearchBtn.textContent = "पेशी सूची ल्याउँदै…";
+        causeDateSearchBtn.setAttribute("aria-busy", "true");
+        inputStatus.textContent = `${normalizeBsDate(dateKey)} को पेशी सूची अदालतबाट ल्याउँदै…`;
+        inputStatus.className = "status";
+        const timeout = setTimeout(() => controller.abort(), 45000);
+        try {
+          const url = new URL(COURT_SOURCE_API_URL);
+          url.searchParams.set("date", dateKey);
+          const response = await fetch(url.href, { cache: "no-store", credentials: "omit", signal: controller.signal });
+          const payload = await response.json();
+          if (sequence !== causeDateLoadSequence) return;
+          if (!response.ok) throw new Error(payload.message || "पेशी सूची ल्याउन सकिएन। पुनः प्रयास गर्नुहोस्।");
+          if (payload.dateKey !== dateKey || typeof payload.html !== "string" || !payload.html.trim()) {
+            throw new Error("अदालतबाट सही मितिको पेशी सूची प्राप्त भएन। पुनः प्रयास गर्नुहोस्।");
+          }
+          const meta = extractSourceMeta(payload.html);
+          if (compactBsDate(meta.causeDate) !== dateKey) {
+            throw new Error("अदालतबाट फरक मितिको पेशी सूची आयो। पुनः प्रयास गर्नुहोस्।");
+          }
+          // Check the selected judge before replacing the existing source or output.
+          if (!meta.judges.some((name) => normalize(name) === targetKey)) {
+            throw new Error(`यस मितिको सूचीमा “${targetName}” को विवरण भेटिएन।`);
+          }
+          causeDateLoadController = null;
+          syncSource(payload.html, `index${dateKey}.html`);
+          if (!runFilter()) {
+            showInputError(outputStatus.textContent || "Output तयार गर्न सकिएन।");
+            return;
+          }
+          inputStatus.textContent = `${normalizeBsDate(dateKey)} को पेशी सूची अदालतबाट प्राप्त भयो; ${targetName}को output तयार छ।`;
+          inputStatus.className = "status success";
+        } catch (error) {
+          if (sequence !== causeDateLoadSequence) return;
+          const message = error.name === "AbortError"
+            ? "पेशी सूची ल्याउन समय लाग्यो। केही समयपछि पुनः प्रयास गर्नुहोस्।"
+            : (error.message || "अदालतको वेबसाइटसँग सम्पर्क हुन सकेन। पुनः प्रयास गर्नुहोस्।");
+          showInputError(message + (outputCode ? " हालको output यथावत् छ।" : ""));
+        } finally {
+          clearTimeout(timeout);
+          if (sequence === causeDateLoadSequence) {
+            causeDateLoadController = null;
+            resetCourtSourceButton();
+          }
         }
-        showMissingCauseList(dateKey);
-        inputStatus.textContent = `उक्त मितिको पेशी सूची भेटिएन (${filename})।`;
-        inputStatus.className = "status error";
+      }
+
+      function resetCourtSourceButton() {
+        causeDateSearchBtn.disabled = false;
+        causeDateSearchBtn.textContent = "पेशी सूची ल्याउनुहोस्";
+        causeDateSearchBtn.removeAttribute("aria-busy");
+      }
+
+      function cancelCourtSourceLoad() {
+        if (!causeDateLoadController) return;
+        causeDateLoadSequence += 1;
+        causeDateLoadController.abort();
+        causeDateLoadController = null;
+        resetCourtSourceButton();
       }
 
       function extractSourceMeta(source) {
@@ -2386,6 +2443,7 @@
       }
 
       function syncSource(value, label = "") {
+        cancelCourtSourceLoad();
         const nextSource = value || "";
         if (nextSource !== sourceCode) resetRowFilterPanel(true);
         sourceCode = nextSource;
@@ -2402,7 +2460,7 @@
         inputStatus.className = "status";
         inputStatus.textContent = sourceCode
           ? `${label ? label + " — " : ""}${formatBytes(new Blob([sourceCode]).size)} source तयार छ।`
-          : "HTML वा TXT फाइल छान्नुहोस्, अथवा code paste गर्नुहोस्।";
+          : "मिति राखेर पेशी सूची ल्याउनुहोस्, वा HTML/TXT upload अथवा code paste गर्नुहोस्।";
         if (label) document.dispatchEvent(new CustomEvent("cause-list:field-snapshot"));
       }
 
@@ -3025,10 +3083,11 @@
       }
 
       function runFilter() {
+        cancelCourtSourceLoad();
         sourceCode = sourceInput.value || sourceCode;
         if (!sourceCode.trim()) {
           showInputError("पहिले source code राख्नुहोस्।");
-          return;
+          return false;
         }
 
         try {
@@ -3076,6 +3135,7 @@
           resetCopyButton();
           saveInputSession(result);
           broadcastRealtimePreview("single");
+          return true;
         } catch (error) {
           outputCode = "";
           inlinePreview.srcdoc = "";
@@ -3085,6 +3145,7 @@
           outputStatus.textContent = error.message || "Source code filter गर्न सकिएन।";
           outputStatus.className = "status error";
           broadcastRealtimePreview("single");
+          return false;
         }
       }
 
@@ -3254,6 +3315,7 @@
       }
 
       function clearAll() {
+        cancelCourtSourceLoad();
         sourceCode = "";
         outputCode = "";
         loadedCauseDateKey = "";
@@ -3276,7 +3338,7 @@
         outputReady.classList.add("hidden");
         setOutputMenu(false);
         outputEmpty.classList.remove("hidden");
-        inputStatus.textContent = "HTML वा TXT फाइल छान्नुहोस्, अथवा code paste गर्नुहोस्।";
+        inputStatus.textContent = "मिति राखेर पेशी सूची ल्याउनुहोस्, वा HTML/TXT upload अथवा code paste गर्नुहोस्।";
         inputStatus.className = "status";
         outputStatus.textContent = "";
         outputStatus.className = "status";
@@ -3309,6 +3371,7 @@
       fileInput.addEventListener("change", () => readFile(fileInput.files[0]));
       sourceInput.addEventListener("input", () => syncSource(sourceInput.value));
       judgeSelect.addEventListener("change", () => {
+        cancelCourtSourceLoad();
         resetRowFilterPanel(true);
         updateTargetUI();
         if (monthlyOutputs.length && activeMonthKey === causeMonthSelect.value) loadMonthCauseLists();
@@ -3327,6 +3390,12 @@
       filterBtn.addEventListener("click", runFilter);
       clearBtn.addEventListener("click", clearAll);
       causeDateSearchBtn.addEventListener("click", loadCauseListByDate);
+      causeDateSearch.addEventListener("input", () => {
+        if (!causeDateLoadController) return;
+        cancelCourtSourceLoad();
+        inputStatus.textContent = "नयाँ मिति राखेर पेशी सूची ल्याउनुहोस्।";
+        inputStatus.className = "status";
+      });
       causeDateSearch.addEventListener("keydown", (event) => {
         if (event.key === "Enter") {
           event.preventDefault();
