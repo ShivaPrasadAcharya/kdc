@@ -395,6 +395,7 @@
       '<a class="cpr-link" href="index.html" title="मुख्य पृष्ठ">⌂ Main</a>' +
       '<a class="cpr-link" href="README.html" title="प्रयोग विधि">ⓘ Help</a>' +
       '<a class="cpr-link" href="https://shivaprasadacharya.github.io/adeshkdc/orders.html?normalizer=1&amp;smart=0&amp;highlight=1" target="_blank" rel="noopener noreferrer" title="आदेश सम्पादन site खोल्नुहोस्">⚖ आदेश सम्पादन</a>' +
+      '<a class="cpr-link" href="https://www.snap-drop.net/" target="_blank" rel="noopener noreferrer" title="फाइल आदानप्रदान (SnapDrop)" aria-label="फाइल आदानप्रदान (SnapDrop)">📎</a>' +
       '<span class="cpr-current" aria-label="हालको पृष्ठ"></span></div>';
     document.body.insertBefore(nav, document.body.firstChild);
     return nav;

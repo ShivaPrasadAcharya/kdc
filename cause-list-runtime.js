@@ -1192,16 +1192,20 @@
                 underline: !0,
                 assistTitle: !0,
               })),
-              (A += V("शाखा अधिकृत-", { align: "left" })),
-              (A += V("कम्प्युटर अपरेटर-", { align: "left" })),
-              (A += V("इजलास नम्बर-", { align: "left" })),
-              (A += V("फाँट-", { align: "left" })),
+              (A += V("शाखा अधिकृत-" + preparationSuffix("branchOfficer"), { align: "left" })),
+              (A += V("कम्प्युटर अपरेटर-" + preparationSuffix("computerOperator"), { align: "left" })),
+              (A += V("इजलास नम्बर-" + preparationSuffix("benchNumber"), { align: "left" })),
+              (A += V("फाँट-" + (T.department ? " " + T.department : ""), { align: "left" })),
               (A += itiParagraph),
               (A += V("फैसला प्रमाणीकरण मिति-", { align: "left" }))),
             (w.innerHTML = A),
             (savedDraftRange = null),
             b.querySelector("#cobDraftWrap").classList.add("cob-show"),
             !1 !== e && w.focus());
+        }
+        function preparationSuffix(key) {
+          const value = r((t.preparationDetails || {})[key] || "");
+          return value ? " " + value : "";
         }
         function re() {
           (setToolsOpen(!1),
@@ -1720,6 +1724,7 @@
                   return (
                     n.cells.forEach(function (e, t) {
                       const n = r(e.textContent);
+                      if (i(n, ["फाँटबाला", "फाँटवाला", "फाँट", "फाट", "फाटँ"])) a.department = t;
                       i(n, [
                         "क्र. स.",
                         "क्र.सं.",
@@ -1775,6 +1780,7 @@
                     plaintiff: Y(i, n.map.plaintiff),
                     defendant: Y(i, n.map.defendant),
                     remarks: Y(i, n.map.remarks),
+                    department: Y(i, n.map.department),
                     serial: s,
                     serialCode: l,
                     rowNumber: o[l],

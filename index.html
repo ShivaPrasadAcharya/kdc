@@ -654,6 +654,22 @@
     .judge-picker select:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(197,145,50,.15); }
     .judge-picker small { grid-column: 1 / -1; color: var(--muted); font-size: .72rem; }
 
+    .preparation-fields {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 9px 12px;
+      align-items: center;
+      margin-top: 10px;
+      padding: 12px 13px;
+      border: 1px solid #e2d7c8;
+      border-radius: 12px;
+      background: #f8f3eb;
+    }
+    .preparation-fields label { color: #46383a; font-size: .82rem; font-weight: 800; }
+    .preparation-fields input { width: 100%; min-width: 0; min-height: 41px; padding: 8px 11px; color: #2c2530; background: #fff; border: 1px solid #cfc6ba; border-radius: 9px; outline: 0; }
+    .preparation-fields input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(197,145,50,.15); }
+    .preparation-fields small { grid-column: 1 / -1; color: var(--muted); font-size: .72rem; }
+
     .row-filter-control {
       display: grid;
       gap: 9px;
@@ -869,6 +885,8 @@
       .btn-primary { flex-basis: 100% !important; }
       .judge-picker { grid-template-columns: 1fr; }
       .judge-picker small { grid-column: auto; }
+      .preparation-fields { grid-template-columns: 1fr; }
+      .preparation-fields small { grid-column: auto; }
       .row-filter-item { grid-template-columns: 1fr; }
       .row-filter-item small { grid-column: auto; }
       .input-history { grid-template-columns:1fr; }
@@ -931,6 +949,7 @@
         </select>
         <a class="readme-btn" href="README.html" target="_blank" rel="noopener" title="प्रयोग विधि खोल्नुहोस्">ⓘ प्रयोग विधि</a>
         <a class="readme-btn" href="https://shivaprasadacharya.github.io/adeshkdc/orders.html?normalizer=1&amp;smart=0&amp;highlight=1" target="_blank" rel="noopener noreferrer" title="आदेश सम्पादन site खोल्नुहोस्">⚖ आदेश सम्पादन</a>
+        <a class="readme-btn" href="https://www.snap-drop.net/" target="_blank" rel="noopener noreferrer" title="फाइल आदानप्रदान (SnapDrop)" aria-label="फाइल आदानप्रदान (SnapDrop)">📎</a>
         <button type="button" class="folder-scan-btn" id="scanCauseFolder">फाइल स्वतः खोज्नुहोस्</button>
         <input type="file" id="causeFolderInput" webkitdirectory directory multiple hidden>
       </div>
@@ -1015,10 +1034,20 @@
             <small>Source code मा भेटिएका न्यायाधीशहरू यहाँ स्वतः थपिन्छन्।</small>
           </div>
 
+          <div class="preparation-fields" role="group" aria-label="फैसला तयार गर्न सहयोग गर्ने" aria-describedby="preparationFieldsHint">
+            <label for="branchOfficerInput">शाखा अधिकृत</label>
+            <input type="text" id="branchOfficerInput" autocomplete="off" placeholder="नाम (ऐच्छिक)">
+            <label for="computerOperatorInput">कम्प्युटर अपरेटर</label>
+            <input type="text" id="computerOperatorInput" autocomplete="off" placeholder="नाम (ऐच्छिक)">
+            <label for="benchNumberInput">इजलास नम्बर</label>
+            <input type="text" id="benchNumberInput" inputmode="numeric" autocomplete="off" placeholder="नम्बर (ऐच्छिक)">
+            <small id="preparationFieldsHint">यी विवरण फैसला preview मा स्वतः आउँछन्। फाँट सम्बन्धित मुद्दाको row बाट लिइन्छ। खाली छोड्न सकिन्छ।</small>
+          </div>
+
           <div class="row-filter-control">
             <button type="button" class="btn row-filter-toggle" id="rowFilterToggle" aria-expanded="false" aria-controls="rowFilterPanel" disabled>Filter Causelist Tables &amp; Rows</button>
             <section class="row-filter-panel" id="rowFilterPanel" aria-label="प्रत्येक causelist table का rows छान्नुहोस्" hidden>
-              <p class="row-filter-intro">प्रत्येक table मा <b>ALL</b> default हो। <b>ALL+</b> ले सबै content राख्छ, <b>ALL</b> ले हेर्न नभ्याइने/हेर्न नमिल्ने/स्थगित rows हटाउँछ, <b>ALL-</b> ले table नै हटाउँछ, र <b>Custom</b> मा serial हरू comma ले छुट्याएर लेख्नुहोस्—जस्तै: <b>क, ग, २, ४</b>।</p>
+              <p class="row-filter-intro">प्रत्येक table मा <b>ALL+</b> default हो। <b>ALL+</b> ले सबै content राख्छ, <b>ALL</b> ले हेर्न नभ्याइने/हेर्न नमिल्ने/स्थगित rows हटाउँछ, <b>ALL-</b> ले table नै हटाउँछ, र <b>Custom</b> मा serial हरू comma ले छुट्याएर लेख्नुहोस्—जस्तै: <b>क, ग, २, ४</b>।</p>
               <div class="row-filter-list" id="rowFilterList"></div>
               <p class="row-filter-status" id="rowFilterStatus" role="status" aria-live="polite"></p>
             </section>
@@ -1090,7 +1119,7 @@
     </div>
   </div>
 
-  <script src="cause-list-ribbon.js?v=search-history-2"></script>
+  <script src="cause-list-ribbon.js?v=search-history-3"></script>
   <script>
     (() => {
       "use strict";
@@ -1200,6 +1229,9 @@
       const sourceInput = document.getElementById("sourceInput");
       const sourceOutput = document.getElementById("sourceOutput");
       const judgeSelect = document.getElementById("judgeSelect");
+      const branchOfficerInput = document.getElementById("branchOfficerInput");
+      const computerOperatorInput = document.getElementById("computerOperatorInput");
+      const benchNumberInput = document.getElementById("benchNumberInput");
       const targetPill = document.getElementById("targetPill");
       const footerTarget = document.getElementById("footerTarget");
       const filterBtn = document.getElementById("filterBtn");
@@ -2200,7 +2232,7 @@
           'header h1{margin:0;font-size:1.12rem}.month-item{margin:0 0 22px;padding:12px;background:#fff;border:1px solid #d5cabe;border-radius:12px;box-shadow:0 8px 24px rgba(56,35,30,.08)}' +
           '.month-item h2{margin:0 0 10px;color:#6d1a27;font-size:1rem}.month-item iframe{display:block;width:100%;height:1450px;border:1px solid #d5cabe;border-radius:8px;background:#fff}' +
           '@media(max-width:700px){body{padding:8px}header{margin:-8px -8px 12px}.month-item{padding:7px}.month-item iframe{height:1100px}}' +
-          '\x3C/style>\x3C/head>\x3Cbody>\x3Cheader>\x3Ch1>' + escapeAttribute(monthLabel) + ' — सबै उपलब्ध पेशी सूची\x3C/h1>\x3C/header>' + sections + '\x3Cscript src="cause-list-ribbon.js?v=search-history-2">\x3C/script>\x3C/body>\x3C/html>';
+          '\x3C/style>\x3C/head>\x3Cbody>\x3Cheader>\x3Ch1>' + escapeAttribute(monthLabel) + ' — सबै उपलब्ध पेशी सूची\x3C/h1>\x3C/header>' + sections + '\x3Cscript src="cause-list-ribbon.js?v=search-history-3">\x3C/script>\x3C/body>\x3C/html>';
       }
 
       function renderMonthlyPreview(outputs) {
@@ -2493,12 +2525,21 @@
         restoreInputHistory.disabled = !inputHistory.length || inputHistorySelect.value === "";
       }
 
+      function readPreparationDetails() {
+        return {
+          branchOfficer: cleanText(branchOfficerInput.value),
+          computerOperator: cleanText(computerOperatorInput.value),
+          benchNumber: cleanText(benchNumberInput.value)
+        };
+      }
+
       function saveInputSession(result) {
         const session = {
           source: sourceCode,
           fileLabel: fileName.textContent || "",
           target: targetName,
           causeDate: result && result.causeDate || "",
+          preparationDetails: readPreparationDetails(),
           savedLabel: new Date().toLocaleString("ne-NP", {dateStyle:"short", timeStyle:"short"})
         };
         inputHistory = [session, ...inputHistory.filter((item) => item.source !== sourceCode)].slice(0, 3);
@@ -2510,6 +2551,10 @@
         const index = Number(inputHistorySelect.value);
         const session = Number.isInteger(index) ? inputHistory[index] : null;
         if (!session) return;
+        const details = session.preparationDetails || {};
+        branchOfficerInput.value = details.branchOfficer || "";
+        computerOperatorInput.value = details.computerOperator || "";
+        benchNumberInput.value = details.benchNumber || "";
         setMode("paste");
         syncSource(session.source, session.fileLabel || "History");
         const judge = Array.from(judgeSelect.options).find((option) => normalize(option.value) === normalize(session.target));
@@ -2599,7 +2644,7 @@
         (doc.body || doc.documentElement).appendChild(configNode);
         const ribbonRuntime = doc.createElement("script");
         ribbonRuntime.id = "cause-list-ribbon-runtime";
-        ribbonRuntime.src = "cause-list-ribbon.js?v=search-history-2";
+        ribbonRuntime.src = "cause-list-ribbon.js?v=search-history-3";
         (doc.body || doc.documentElement).appendChild(ribbonRuntime);
         const dateLibrary = doc.createElement("script");
         dateLibrary.setAttribute("data-cob-nepali-date", "3.4.0");
@@ -2607,8 +2652,8 @@
         (doc.body || doc.documentElement).appendChild(dateLibrary);
         const runtime = doc.createElement("script");
         runtime.id = "court-order-builder-runtime";
-        runtime.setAttribute("data-version", "14");
-        runtime.src = "cause-list-runtime.js?v=14";
+        runtime.setAttribute("data-version", "15");
+        runtime.src = "cause-list-runtime.js?v=15";
         (doc.body || doc.documentElement).appendChild(runtime);
         const proofreaderRuntime = doc.createElement("script");
         proofreaderRuntime.id = "nepali-proofreader-engine-runtime";
@@ -2711,8 +2756,8 @@
       }
 
       function normalizeRowFilterMode(value) {
-        const mode = String(value || "ALL").trim().toUpperCase();
-        return ["ALL+", "ALL", "ALL-", "CUSTOM"].includes(mode) ? mode : "ALL";
+        const mode = String(value || "ALL+").trim().toUpperCase();
+        return ["ALL+", "ALL", "ALL-", "CUSTOM"].includes(mode) ? mode : "ALL+";
       }
 
       function rowFilterSelection(key) {
@@ -2726,7 +2771,7 @@
         if (typeof stored === "string" && stored.trim() && !/^(?:all|सबै)$/i.test(stored.trim())) {
           return { mode:"CUSTOM", serials:stored };
         }
-        return { mode:"ALL", serials:"" };
+        return { mode:"ALL+", serials:"" };
       }
 
       function parseCustomRowSerials(value) {
@@ -3026,7 +3071,7 @@
           excludedBenchHeaders += 1;
         });
 
-        // Default ALL mode मा मात्र अन्तिम disposition column का excluded अवस्था हटाइन्छन्।
+        // ALL mode मा मात्र अन्तिम disposition column का excluded अवस्था हटाइन्छन्।
         let removedDispositionRows = 0;
         const excludedDispositionKeys = ["हेर्न नभ्याइने", "हेर्न नभ्याईने", "हेर्न नमिल्ने", "स्थगित"].map(normalize);
         defaultModeTables.forEach((table) => {
@@ -3058,6 +3103,7 @@
           court: sourceMeta.court,
           causeDate: sourceMeta.causeDate || normalizeBsDate(loadedCauseDateKey),
           causeDateKey: compactBsDate(sourceMeta.causeDate) || loadedCauseDateKey,
+          preparationDetails: readPreparationDetails(),
           orderRoot: "order",
           orderManifestPath: "order/index.json"
         });
@@ -3324,6 +3370,9 @@
         monthlyManifestResources = {};
         monthlyReceivedDates = new Set();
         sourceInput.value = "";
+        branchOfficerInput.value = "";
+        computerOperatorInput.value = "";
+        benchNumberInput.value = "";
         sourceOutput.value = "";
         inlinePreview.srcdoc = "";
         inlinePreview.classList.remove("is-monthly");
@@ -3370,6 +3419,11 @@
       chooseFile.addEventListener("click", () => fileInput.click());
       fileInput.addEventListener("change", () => readFile(fileInput.files[0]));
       sourceInput.addEventListener("input", () => syncSource(sourceInput.value));
+      [branchOfficerInput, computerOperatorInput, benchNumberInput].forEach((input) => {
+        input.addEventListener("change", () => {
+          if (sourceCode.trim() && !causeDateLoadController) runFilter();
+        });
+      });
       judgeSelect.addEventListener("change", () => {
         cancelCourtSourceLoad();
         resetRowFilterPanel(true);
