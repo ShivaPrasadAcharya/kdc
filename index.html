@@ -480,6 +480,13 @@
 
     .panel-body { padding: 18px; }
 
+    .output-panel > summary { cursor: pointer; list-style: none; }
+    .output-panel > summary::-webkit-details-marker { display: none; }
+    .output-panel > summary::after { content: "▾"; color: var(--maroon); }
+    .output-panel[open] > summary::after { content: "▴"; }
+    .output-panel > summary:focus-visible { outline: 3px solid var(--gold); outline-offset: -3px; }
+    .output-panel:not([open]) > summary { border-bottom: 0; }
+
     .drop-zone {
       display: grid;
       place-items: center;
@@ -623,11 +630,11 @@
 
     .judge-picker {
       display: grid;
-      grid-template-columns: auto minmax(190px, 1fr);
+      grid-template-columns: auto minmax(0, 1fr) auto;
       gap: 9px 12px;
       align-items: center;
       width: 100%;
-      margin-top: 14px;
+      margin-top: 0;
       padding: 12px 13px;
       background: #f8f3eb;
       border: 1px solid #e2d7c8;
@@ -754,6 +761,9 @@
     }
     .date-loader input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(197,145,50,.15); }
     .date-loader small { color: var(--muted); font-size: .72rem; line-height: 1.5; }
+    .date-lookup-notice { margin: 0; padding: 11px 12px; color: #7a3415; background: #fff1d6; border: 1px solid #e7c27e; border-radius: 9px; font-size: .82rem; line-height: 1.6; }
+    .date-lookup-notice[hidden] { display: none; }
+    .input-history + .date-loader { margin-top: 14px; }
 
     .inline-preview {
       width: 100%;
@@ -883,8 +893,8 @@
       textarea { min-height: 245px; }
       .actions .btn { flex: 1 1 auto; }
       .btn-primary { flex-basis: 100% !important; }
-      .judge-picker { grid-template-columns: 1fr; }
-      .judge-picker small { grid-column: auto; }
+      .judge-picker { grid-template-columns: minmax(0, 1fr) auto; }
+      .judge-picker label, .judge-picker small { grid-column: 1 / -1; }
       .preparation-fields { grid-template-columns: 1fr; }
       .preparation-fields small { grid-column: auto; }
       .row-filter-item { grid-template-columns: 1fr; }
@@ -993,13 +1003,29 @@
         </div>
 
         <div class="panel-body">
+          <div class="judge-picker">
+            <label for="judgeSelect">श्रीमान् छनोट गर्नुहोस्</label>
+            <select id="judgeSelect" aria-label="Filter र आदेशका लागि न्यायाधीश छान्नुहोस्">
+              <option value="शिवप्रसाद आचार्य">शिवप्रसाद आचार्य</option>
+            </select>
+            <button type="button" class="btn btn-subtle" id="goCauseListBtn" title="छानिएको न्यायाधीशको पेशी सूची खोल्नुहोस्" disabled>GO</button>
+            <small>Source code मा भेटिएका न्यायाधीशहरू यहाँ स्वतः थपिन्छन्।</small>
+          </div>
+
+          <div class="input-history" aria-label="पछिल्ला input sessions">
+            <label for="inputHistorySelect">Last 3 sessions</label>
+            <select id="inputHistorySelect" disabled><option value="">History खाली छ</option></select>
+            <button type="button" class="btn btn-subtle" id="restoreInputHistory" disabled>Restore</button>
+          </div>
+
           <div class="date-loader">
             <label for="causeDateSearch">अदालतबाट मितिअनुसार पेशी सूची ल्याउनुहोस्</label>
             <div class="date-loader-row">
-              <input id="causeDateSearch" inputmode="numeric" autocomplete="off" placeholder="२०८३।०४।१५ वा 20830415" aria-describedby="causeDateHint">
+              <input id="causeDateSearch" inputmode="numeric" autocomplete="off" placeholder="YYYYMMDD" aria-describedby="causeDateHint causeDateNotice">
               <button type="button" class="btn btn-subtle" id="causeDateSearchBtn">पेशी सूची ल्याउनुहोस्</button>
             </div>
             <small id="causeDateHint">मिति YYYYMMDD वा YYYY-MM-DD मा लेख्नुहोस्; नेपाली अंक पनि चल्छ। अदालतको वेबसाइटबाट सो मितिको सूची ल्याएर छानिएको न्यायाधीशको output स्वतः तयार हुन्छ।</small>
+            <p id="causeDateNotice" class="date-lookup-notice" role="status" aria-live="polite" hidden></p>
           </div>
 
           <div id="uploadPane" class="hidden" role="tabpanel" aria-labelledby="uploadTab">
@@ -1018,20 +1044,6 @@
           <div id="pastePane" role="tabpanel" aria-labelledby="pasteTab">
             <label for="sourceInput" class="hidden">पूरा HTML source code</label>
             <textarea id="sourceInput" spellcheck="false" placeholder="यहाँ पूरा source code paste गर्नुहोस्…"></textarea>
-          </div>
-
-          <div class="input-history" aria-label="पछिल्ला input sessions">
-            <label for="inputHistorySelect">Last 3 sessions</label>
-            <select id="inputHistorySelect" disabled><option value="">History खाली छ</option></select>
-            <button type="button" class="btn btn-subtle" id="restoreInputHistory" disabled>Restore</button>
-          </div>
-
-          <div class="judge-picker">
-            <label for="judgeSelect">श्रीमान् छनोट गर्नुहोस्</label>
-            <select id="judgeSelect" aria-label="Filter र आदेशका लागि न्यायाधीश छान्नुहोस्">
-              <option value="शिवप्रसाद आचार्य">शिवप्रसाद आचार्य</option>
-            </select>
-            <small>Source code मा भेटिएका न्यायाधीशहरू यहाँ स्वतः थपिन्छन्।</small>
           </div>
 
           <div class="preparation-fields" role="group" aria-label="फैसला तयार गर्न सहयोग गर्ने" aria-describedby="preparationFieldsHint">
@@ -1061,13 +1073,13 @@
         </div>
       </article>
 
-      <article class="panel">
-        <div class="panel-head">
+      <details class="panel output-panel" id="outputPanel">
+        <summary class="panel-head">
           <div class="panel-title">
             <span class="step">२</span>
             <h3>Filtered output</h3>
           </div>
-        </div>
+        </summary>
 
         <div class="panel-body">
           <div class="output-empty" id="outputEmpty">
@@ -1102,7 +1114,7 @@
           </div>
           <div class="status" id="outputStatus" role="status" aria-live="polite"></div>
         </div>
-      </article>
+      </details>
     </section>
   </main>
 
@@ -1129,6 +1141,161 @@
       const CAUSE_LIST_CACHE_KEY = "cause-list-auto-files-v1";
       const INPUT_HISTORY_KEY = "cause-list-input-history-v1";
       const COURT_SOURCE_API_URL = "https://kdc-court-source-api.spacharya43.chatgpt.site/api/cause-list";
+      // Calendar month lengths: https://github.com/nativeTiger/nepali-date-utils (MIT).
+      // BS 1970-01-01 = AD 1913-04-13. Future-year rows follow the source table.
+      /*
+       * MIT License — Copyright (c) 2026 nativeTiger
+       * Permission is hereby granted, free of charge, to any person obtaining a copy
+       * of this software and associated documentation files (the "Software"), to deal
+       * in the Software without restriction, including without limitation the rights
+       * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+       * copies of the Software, and to permit persons to whom the Software is
+       * furnished to do so, subject to the following conditions:
+       * The above copyright notice and this permission notice shall be included in all
+       * copies or substantial portions of the Software.
+       * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+       * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+       * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+       * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+       * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+       * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+       * SOFTWARE.
+       */
+      const BS_MONTH_DAYS = {
+        1970: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        1971: [31, 31, 32, 31, 32, 30, 30, 29, 30, 29, 30, 30],
+        1972: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+        1973: [30, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
+        1974: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        1975: [31, 31, 32, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+        1976: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+        1977: [30, 32, 31, 32, 31, 31, 29, 30, 30, 29, 29, 31],
+        1978: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        1979: [31, 31, 32, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+        1980: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+        1981: [31, 31, 31, 32, 31, 31, 29, 30, 30, 29, 30, 30],
+        1982: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        1983: [31, 31, 32, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+        1984: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+        1985: [31, 31, 31, 32, 31, 31, 29, 30, 30, 29, 30, 30],
+        1986: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        1987: [31, 32, 31, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+        1988: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+        1989: [31, 31, 31, 32, 31, 31, 30, 29, 30, 29, 30, 30],
+        1990: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        1991: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 30],
+        1992: [31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
+        1993: [31, 31, 31, 32, 31, 31, 30, 29, 30, 29, 30, 30],
+        1994: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        1995: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 30],
+        1996: [31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
+        1997: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        1998: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        1999: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+        2000: [30, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
+        2001: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        2002: [31, 31, 32, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+        2003: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+        2004: [30, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
+        2005: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        2006: [31, 31, 32, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+        2007: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+        2008: [31, 31, 31, 32, 31, 31, 29, 30, 30, 29, 29, 31],
+        2009: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        2010: [31, 31, 32, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+        2011: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+        2012: [31, 31, 31, 32, 31, 31, 29, 30, 30, 29, 30, 30],
+        2013: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        2014: [31, 31, 32, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+        2015: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+        2016: [31, 31, 31, 32, 31, 31, 29, 30, 30, 29, 30, 30],
+        2017: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        2018: [31, 32, 31, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+        2019: [31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
+        2020: [31, 31, 31, 32, 31, 31, 30, 29, 30, 29, 30, 30],
+        2021: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        2022: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 30],
+        2023: [31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
+        2024: [31, 31, 31, 32, 31, 31, 30, 29, 30, 29, 30, 30],
+        2025: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        2026: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+        2027: [30, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
+        2028: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        2029: [31, 31, 32, 31, 32, 30, 30, 29, 30, 29, 30, 30],
+        2030: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+        2031: [30, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
+        2032: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        2033: [31, 31, 32, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+        2034: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+        2035: [30, 32, 31, 32, 31, 31, 29, 30, 30, 29, 29, 31],
+        2036: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        2037: [31, 31, 32, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+        2038: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+        2039: [31, 31, 31, 32, 31, 31, 29, 30, 30, 29, 30, 30],
+        2040: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        2041: [31, 31, 32, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+        2042: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+        2043: [31, 31, 31, 32, 31, 31, 29, 30, 30, 29, 30, 30],
+        2044: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        2045: [31, 32, 31, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+        2046: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+        2047: [31, 31, 31, 32, 31, 31, 30, 29, 30, 29, 30, 30],
+        2048: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        2049: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 30],
+        2050: [31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
+        2051: [31, 31, 31, 32, 31, 31, 30, 29, 30, 29, 30, 30],
+        2052: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        2053: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 30],
+        2054: [31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
+        2055: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        2056: [31, 31, 32, 31, 32, 30, 30, 29, 30, 29, 30, 30],
+        2057: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+        2058: [30, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
+        2059: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        2060: [31, 31, 32, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+        2061: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+        2062: [30, 32, 31, 32, 31, 31, 29, 30, 29, 30, 29, 31],
+        2063: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        2064: [31, 31, 32, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+        2065: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+        2066: [31, 31, 31, 32, 31, 31, 29, 30, 30, 29, 29, 31],
+        2067: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        2068: [31, 31, 32, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+        2069: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+        2070: [31, 31, 31, 32, 31, 31, 29, 30, 30, 29, 30, 30],
+        2071: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        2072: [31, 32, 31, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+        2073: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+        2074: [31, 31, 31, 32, 31, 31, 30, 29, 30, 29, 30, 30],
+        2075: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        2076: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 30],
+        2077: [31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
+        2078: [31, 31, 31, 32, 31, 31, 30, 29, 30, 29, 30, 30],
+        2079: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        2080: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 30],
+        2081: [31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
+        2082: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        2083: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        2084: [31, 31, 32, 31, 31, 30, 30, 30, 29, 30, 30, 30],
+        2085: [31, 32, 31, 32, 30, 31, 30, 30, 29, 30, 30, 30],
+        2086: [30, 32, 31, 32, 31, 30, 30, 30, 29, 30, 30, 30],
+        2087: [31, 31, 32, 31, 31, 31, 30, 30, 29, 30, 30, 30],
+        2088: [30, 31, 32, 32, 30, 31, 30, 30, 29, 30, 30, 30],
+        2089: [30, 32, 31, 32, 31, 30, 30, 30, 29, 30, 30, 30],
+        2090: [30, 32, 31, 32, 31, 30, 30, 30, 29, 30, 30, 30],
+        2091: [31, 31, 32, 31, 31, 31, 30, 30, 29, 30, 30, 30],
+        2092: [30, 31, 32, 32, 31, 30, 30, 30, 29, 30, 30, 30],
+        2093: [30, 32, 31, 32, 31, 30, 30, 30, 29, 30, 30, 30],
+        2094: [31, 31, 32, 31, 31, 30, 30, 30, 29, 30, 30, 30],
+        2095: [31, 31, 32, 31, 31, 31, 30, 29, 30, 30, 30, 30],
+        2096: [30, 31, 32, 32, 31, 30, 30, 30, 30, 29, 30, 30],
+        2097: [31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 30, 30],
+        2098: [31, 31, 32, 31, 31, 31, 29, 30, 29, 30, 29, 31],
+        2099: [31, 31, 32, 31, 31, 31, 30, 29, 29, 30, 30, 30],
+      };
+      const CALENDAR_DAY_MS = 86400000;
+      const BS_EPOCH_UTC = Date.UTC(1913, 3, 13);
+
 
       // Nepali spelling variants, digits and optional spaces are unified only for search.
       const NepaliNormalizer = {
@@ -1229,6 +1396,7 @@
       const sourceInput = document.getElementById("sourceInput");
       const sourceOutput = document.getElementById("sourceOutput");
       const judgeSelect = document.getElementById("judgeSelect");
+      const goCauseListBtn = document.getElementById("goCauseListBtn");
       const branchOfficerInput = document.getElementById("branchOfficerInput");
       const computerOperatorInput = document.getElementById("computerOperatorInput");
       const benchNumberInput = document.getElementById("benchNumberInput");
@@ -1252,6 +1420,7 @@
       const selectedRowCount = document.getElementById("selectedRowCount");
       const causeDateSearch = document.getElementById("causeDateSearch");
       const causeDateSearchBtn = document.getElementById("causeDateSearchBtn");
+      const causeDateNotice = document.getElementById("causeDateNotice");
       const inlinePreview = document.getElementById("inlinePreview");
       const monthlyPreview = document.getElementById("monthlyPreview");
       const missingDialog = document.getElementById("causeListMissingDialog");
@@ -1289,6 +1458,8 @@
       let sourceCode = "";
       let causeDateLoadController = null;
       let causeDateLoadSequence = 0;
+      let causeDateEdited = false;
+      let causeDateRefreshTimer = 0;
       let outputCode = "";
       let loadedCauseDateKey = "";
       let monthlyOutputs = [];
@@ -1312,6 +1483,7 @@
       let rowFilterTables = [];
 
       function broadcastRealtimePreview(mode = "single") {
+        goCauseListBtn.disabled = !outputCode;
         document.dispatchEvent(new CustomEvent("cause-list:preview-updated", {
           detail: {
             html: outputCode,
@@ -1345,6 +1517,7 @@
         if (stats.date) causeListDateStat.textContent = stats.date;
         if (stats.selectedRows) selectedRowCount.textContent = stats.selectedRows;
         outputReady.classList.toggle("hidden", !outputCode);
+        goCauseListBtn.disabled = !outputCode;
         outputEmpty.classList.toggle("hidden", Boolean(outputCode));
         clearBtn.disabled = !sourceCode.trim() && !outputCode;
         outputStatus.textContent = outputCode ? "अर्को device बाट synced preview प्राप्त भयो।" : "";
@@ -1414,6 +1587,61 @@
         const dayNumber = Number(day);
         if (Number(year) < 1900 || monthNumber < 1 || monthNumber > 12 || dayNumber < 1 || dayNumber > 32) return "";
         return `${year}${String(monthNumber).padStart(2, "0")}${String(dayNumber).padStart(2, "0")}`;
+      }
+
+      function bsDateFromUtc(utcDate) {
+        let remaining = Math.floor((utcDate - BS_EPOCH_UTC) / CALENDAR_DAY_MS);
+        if (remaining < 0) return "";
+        for (const [year, months] of Object.entries(BS_MONTH_DAYS)) {
+          for (let month = 0; month < months.length; month += 1) {
+            if (remaining < months[month]) {
+              return `${year}${String(month + 1).padStart(2, "0")}${String(remaining + 1).padStart(2, "0")}`;
+            }
+            remaining -= months[month];
+          }
+        }
+        return "";
+      }
+
+      function bsDateToUtc(dateKey) {
+        const year = Number(dateKey.slice(0, 4));
+        const month = Number(dateKey.slice(4, 6));
+        const day = Number(dateKey.slice(6, 8));
+        const months = BS_MONTH_DAYS[year];
+        if (!months || month < 1 || month > 12 || day < 1 || day > months[month - 1]) return null;
+        let elapsed = day - 1;
+        for (const [calendarYear, calendarMonths] of Object.entries(BS_MONTH_DAYS)) {
+          if (Number(calendarYear) >= year) break;
+          elapsed += calendarMonths.reduce((total, count) => total + count, 0);
+        }
+        elapsed += months.slice(0, month - 1).reduce((total, count) => total + count, 0);
+        return BS_EPOCH_UTC + elapsed * CALENDAR_DAY_MS;
+      }
+
+      function refreshCurrentCauseDate() {
+        const parts = new Intl.DateTimeFormat("en-GB", {
+          timeZone: "Asia/Kathmandu", year: "numeric", month: "2-digit", day: "2-digit"
+        }).formatToParts(new Date());
+        const part = (type) => Number(parts.find((item) => item.type === type).value);
+        const todayKey = bsDateFromUtc(Date.UTC(part("year"), part("month") - 1, part("day")));
+        if (!causeDateEdited && todayKey) causeDateSearch.value = todayKey;
+        clearTimeout(causeDateRefreshTimer);
+        const nepalNow = Date.now() + 345 * 60000;
+        causeDateRefreshTimer = setTimeout(refreshCurrentCauseDate, CALENDAR_DAY_MS - (nepalNow % CALENDAR_DAY_MS) + 50);
+      }
+
+      function clearCauseDateNotice() {
+        causeDateNotice.hidden = true;
+        causeDateNotice.textContent = "";
+      }
+
+      function showUnpublishedCauseList(dateKey) {
+        const utcDate = bsDateToUtc(dateKey);
+        const weekday = utcDate === null ? "unknown" : ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][new Date(utcDate).getUTCDay()];
+        const message = `The day is ${weekday} and no causelist is published in the given date.`;
+        causeDateNotice.textContent = message;
+        causeDateNotice.hidden = false;
+        showInputError(message);
       }
 
       function causeListFilename(dateKey) {
@@ -2284,7 +2512,8 @@
         outputStatus.textContent = "महिनाका सबै उपलब्ध पेशी सूची तयार छन्। Preview button बाट webpage हेर्न सकिन्छ; Rows प्राप्त भएपछि Menu भित्रको Download .json ले सबैको एउटै index.json तयार गर्छ।";
         outputStatus.className = "status success";
         broadcastRealtimePreview("monthly");
-        if (typeof outputReady.scrollIntoView === "function") outputReady.scrollIntoView({ behavior: "smooth", block: "start" });
+        const outputPanel = document.getElementById("outputPanel");
+        if (typeof outputPanel.scrollIntoView === "function") outputPanel.scrollIntoView({ behavior: "smooth", block: "start" });
       }
 
       function handleMonthlyManifestMessage(event) {
@@ -2332,9 +2561,16 @@
       }
 
       async function loadCauseListByDate() {
+        clearCauseDateNotice();
         const dateKey = compactBsDate(causeDateSearch.value);
         if (!dateKey || !/^[०-९0-9\s।./_-]+$/.test(causeDateSearch.value.trim())) {
           showInputError("मिति YYYYMMDD वा YYYY।MM।DD ढाँचामा लेख्नुहोस्।");
+          causeDateSearch.focus();
+          return;
+        }
+        const calendarMonths = BS_MONTH_DAYS[Number(dateKey.slice(0, 4))];
+        if (calendarMonths && bsDateToUtc(dateKey) === null) {
+          showInputError("पात्रोमा उक्त मिति छैन। सही मिति राख्नुहोस्।");
           causeDateSearch.focus();
           return;
         }
@@ -2355,6 +2591,10 @@
           const response = await fetch(url.href, { cache: "no-store", credentials: "omit", signal: controller.signal });
           const payload = await response.json();
           if (sequence !== causeDateLoadSequence) return;
+          if (response.status === 404 && payload.code === "NO_CAUSE_LIST") {
+            showUnpublishedCauseList(dateKey);
+            return;
+          }
           if (!response.ok) throw new Error(payload.message || "पेशी सूची ल्याउन सकिएन। पुनः प्रयास गर्नुहोस्।");
           if (payload.dateKey !== dateKey || typeof payload.html !== "string" || !payload.html.trim()) {
             throw new Error("अदालतबाट सही मितिको पेशी सूची प्राप्त भएन। पुनः प्रयास गर्नुहोस्।");
@@ -2476,6 +2716,7 @@
 
       function syncSource(value, label = "") {
         cancelCourtSourceLoad();
+        clearCauseDateNotice();
         const nextSource = value || "";
         if (nextSource !== sourceCode) resetRowFilterPanel(true);
         sourceCode = nextSource;
@@ -3362,6 +3603,7 @@
 
       function clearAll() {
         cancelCourtSourceLoad();
+        clearCauseDateNotice();
         sourceCode = "";
         outputCode = "";
         loadedCauseDateKey = "";
@@ -3445,7 +3687,8 @@
       clearBtn.addEventListener("click", clearAll);
       causeDateSearchBtn.addEventListener("click", loadCauseListByDate);
       causeDateSearch.addEventListener("input", () => {
-        if (!causeDateLoadController) return;
+        causeDateEdited = true;
+        clearCauseDateNotice();
         cancelCourtSourceLoad();
         inputStatus.textContent = "नयाँ मिति राखेर पेशी सूची ल्याउनुहोस्।";
         inputStatus.className = "status";
@@ -3501,6 +3744,7 @@
       document.getElementById("downloadTxt").addEventListener("click", () => download("txt", "text/plain"));
       document.getElementById("downloadJson").addEventListener("click", downloadIndexJson);
       document.getElementById("previewBtn").addEventListener("click", previewOutput);
+      goCauseListBtn.addEventListener("click", previewOutput);
       outputMenuBtn.addEventListener("click", () => {
         const open = outputMenuPanel.hidden;
         setOutputMenu(open, open);
@@ -3547,6 +3791,12 @@
           event.preventDefault();
           runFilter();
         }
+      });
+      refreshCurrentCauseDate();
+      window.addEventListener("focus", refreshCurrentCauseDate);
+      window.addEventListener("pageshow", refreshCurrentCauseDate);
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) refreshCurrentCauseDate();
       });
       readInputHistory();
       const openSharedRibbonSearch = () => {
