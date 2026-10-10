@@ -221,21 +221,14 @@
         let T = null,
           j = "none",
           A = "",
-          savedDraftRange = null,
-          editorHistory = [],
-          editorHistoryIndex = -1,
-          restoringEditorHistory = false,
-          lastEditorInputAt = 0,
-          lastEditorInputKind = "";
+          savedDraftRange = null;
         const R = Array.isArray(t.judges) ? t.judges.slice() : [];
         function rememberDraftRange() {
           const selection = getSelection();
           if (!selection || !selection.rangeCount) return;
           const range = selection.getRangeAt(0);
-          if (w.contains(range.commonAncestorContainer)) {
+          if (w.contains(range.commonAncestorContainer))
             savedDraftRange = range.cloneRange();
-            rememberHistorySelection();
-          }
         }
         function restoreDraftRange() {
           if (!savedDraftRange) return null;
@@ -264,7 +257,7 @@
             return block ? [block] : [];
           }
           return Array.from(
-            w.querySelectorAll("[data-docx-p],p,li,.cob-main-body > div"),
+            w.querySelectorAll("[data-docx-p],li,.cob-main-body > div"),
           ).filter(function (block) {
             try {
               return range.intersectsNode(block);
@@ -457,6 +450,62 @@
           rememberDraftRange();
           w.dispatchEvent(new Event("input", { bubbles: !0 }));
         }
+        function continueBulletOnEnter(event) {
+          if (
+            event.key !== "Enter" ||
+            event.shiftKey ||
+            event.ctrlKey ||
+            event.metaKey ||
+            event.altKey
+          )
+            return !1;
+          const selection = getSelection();
+          if (!selection || !selection.rangeCount) return !1;
+          const range = selection.getRangeAt(0);
+          if (!range.collapsed) return !1;
+          const block = draftBlockForNode(range.startContainer),
+            mode = block && block.dataset.cobList;
+          if (!block || !["bullet", "subbullet", "number"].includes(mode)) return !1;
+          if (mode === "number") {
+            const copy = block.cloneNode(true); copy.querySelectorAll("[data-cob-list-marker]").forEach(function (marker) { marker.remove(); });
+            if (!copy.textContent.trim()) { event.preventDefault(); setBlockList(block, "none"); w.dispatchEvent(new Event("input", { bubbles: true })); return true; }
+          }
+          event.preventDefault();
+          const tailRange = document.createRange();
+          tailRange.selectNodeContents(block);
+          tailRange.setStart(range.startContainer, range.startOffset);
+          const tail = tailRange.extractContents();
+          tail.querySelectorAll("[data-cob-list-marker]").forEach(function (marker) {
+            marker.remove();
+          });
+          const next = block.cloneNode(!1);
+          next.removeAttribute("id");
+          next.classList.remove("cob-blank");
+          next.dataset.docxP = "1";
+          setBlockList(next, mode);
+          const hasTail =
+            r(tail.textContent) || Boolean(tail.querySelector("br,*"));
+          hasTail ? next.appendChild(tail) : next.appendChild(document.createElement("br"));
+          block.after(next);
+          if (mode === "number") refreshNumbering();
+          const marker = listMarker(next),
+            caretNode = marker && marker.nextSibling,
+            caret = document.createRange();
+          if (caretNode && 3 === caretNode.nodeType)
+            caret.setStart(caretNode, 0);
+          else if (caretNode) caret.setStartBefore(caretNode);
+          else caret.setStart(next, next.childNodes.length);
+          caret.collapse(!0);
+          selection.removeAllRanges();
+          selection.addRange(caret);
+          savedDraftRange = caret.cloneRange();
+          setToolsStatus(
+            (mode === "number" ? "Numbering" : "subbullet" === mode ? "Subbullet" : "Bullet") +
+              " को नयाँ item तयार भयो।",
+          );
+          w.dispatchEvent(new Event("input", { bubbles: !0 }));
+          return !0;
+        }
         function applyPreviewFontSize(value, notify) {
           const size = Math.max(9, Math.min(24, Number(value) || 13));
           w.dataset.cobFontSize = String(size);
@@ -466,440 +515,6 @@
           fontSizeValue.textContent = size + " pt";
           notify && w.dispatchEvent(new Event("input", { bubbles: !0 }));
         }
-        const modal = b.querySelector('.cob-modal'), draftWrap = b.querySelector('#cobDraftWrap');
-        const ribbon = document.createElement('div');
-        ribbon.className = 'cob-word-ribbon';
-        ribbon.innerHTML = '<span class="cob-ribbon-label">Document</span>';
-        b.querySelector('.cob-controls').before(ribbon);
-        ribbon.appendChild(b.querySelector('.cob-actions'));
-        const wordOnlineUrl = 'https://word.cloud.microsoft/';
-        const wordOnlineButton = document.createElement('button');
-        wordOnlineButton.type = 'button';
-        wordOnlineButton.id = 'cobWordOnline';
-        wordOnlineButton.className = 'cob-btn cob-word-online-btn';
-        wordOnlineButton.title = 'Download this draft and open Microsoft Word Online';
-        wordOnlineButton.setAttribute('aria-label', 'Download this draft and open Microsoft Word Online in a new tab');
-        wordOnlineButton.setAttribute('aria-controls', 'cobWordHandoff');
-        wordOnlineButton.setAttribute('aria-expanded', 'false');
-        wordOnlineButton.innerHTML = '<span class="cob-online-word-mark" aria-hidden="true">W</span><span>Word Online</span><span aria-hidden="true">↗</span>';
-        b.querySelector('#cobDocx').after(wordOnlineButton);
-        const wordHandoff = document.createElement('section');
-        wordHandoff.id = 'cobWordHandoff';
-        wordHandoff.className = 'cob-word-handoff';
-        wordHandoff.hidden = true;
-        wordHandoff.setAttribute('aria-label', 'Word Online document handoff');
-        wordHandoff.innerHTML = '<div class="cob-word-handoff-head"><strong>Word Online</strong><button type="button" id="cobWordHandoffClose" aria-label="Word Online निर्देशन बन्द गर्नुहोस्">×</button></div><p role="status" aria-live="polite">डाउनलोड हुने फाइल: <strong id="cobWordFileName"></strong></p><p>Microsoft account बाट sign in गरी Word Online मा <b>Upload/open</b> मार्फत यो .docx फाइल खोल्नुहोस्। OneDrive मा <b>Add new → Files upload</b> बाट पनि खोल्न सकिन्छ।</p><p>सम्पादनपछि Word Online मा <b>File → Create a Copy → Download a copy</b> रोज्नुहोस्। तलको download बटनले KDC मा रहेको मस्यौदा डाउनलोड गर्छ।</p><div class="cob-word-handoff-actions"><button type="button" id="cobWordDownload">Download KDC draft (.docx)</button><a href="' + wordOnlineUrl + '" target="_blank" rel="noopener noreferrer">Open Word Online ↗</a><a href="https://onedrive.live.com/" target="_blank" rel="noopener noreferrer">OneDrive ↗</a></div>';
-        b.querySelector('.cob-controls').after(wordHandoff);
-        function draftDocxFileName() {
-          if (!T) return '';
-          const details = _(T), caseInfo = m(T.rawCase), fallback = (g.value || 'आदेश') + '-' + caseInfo.caseNo.replace(/[\\/:*?"<>|]/g, '-');
-          return (details.date && details.serial ? details.stem : fallback) + '.docx';
-        }
-        function setWordHandoffOpen(open) {
-          wordHandoff.hidden = !open;
-          wordOnlineButton.setAttribute('aria-expanded', String(open));
-          if (open) wordHandoff.querySelector('#cobWordFileName').textContent = draftDocxFileName();
-        }
-        wordOnlineButton.addEventListener('click', function () {
-          if (!T) return;
-          setWordHandoffOpen(true);
-          b.querySelector('#cobDocx').click();
-          window.open(wordOnlineUrl, '_blank', 'noopener,noreferrer');
-        });
-        wordHandoff.querySelector('#cobWordDownload').addEventListener('click', function () {
-          if (!T) return;
-          setWordHandoffOpen(true);
-          b.querySelector('#cobDocx').click();
-        });
-        wordHandoff.querySelector('#cobWordHandoffClose').addEventListener('click', function () {
-          setWordHandoffOpen(false);
-          wordOnlineButton.focus();
-        });
-        b.querySelector('.cob-head h2').insertAdjacentHTML('afterbegin', '<span class="cob-word-mark" aria-hidden="true">W</span>');
-        w.setAttribute('role', 'textbox');
-        w.setAttribute('aria-label', 'आदेश/फैसला दस्तावेज सम्पादन');
-        w.setAttribute('aria-multiline', 'true');
-        const paperStage = document.createElement('div'), ruler = document.createElement('div');
-        paperStage.className = 'cob-paper-stage';
-        ruler.className = 'cob-ruler';
-        ruler.setAttribute('aria-label', 'Page ruler in centimetres');
-        ruler.innerHTML = Array.from({length:18}, function (_, i) { return '<span>' + i + '</span>'; }).join('');
-        draftWrap.appendChild(paperStage);
-        paperStage.append(ruler, w);
-        const statusBar = document.createElement('footer');
-        statusBar.className = 'cob-word-status';
-        statusBar.innerHTML = '<span id="cobWordCount">0 words</span><span id="cobSelectionStatus">A4 · नेपाली</span><label for="cobZoom">Zoom <input id="cobZoom" type="range" min="60" max="140" step="10" value="100"><output id="cobZoomValue">100%</output></label>';
-        draftWrap.after(statusBar);
-        const wordTools = document.createElement('div');
-        wordTools.className = 'cob-word-tools';
-        wordTools.innerHTML = `
-          <fieldset><legend>Font &amp; text</legend>
-            <label for="cobFontFamily">Font</label><select id="cobFontFamily"><option>Kalimati</option><option>Noto Serif Devanagari</option><option>Nirmala UI</option><option>Mangal</option><option>Times New Roman</option><option>Arial</option></select>
-            <label for="cobSelectionSize">Size (pt)</label><input id="cobSelectionSize" type="number" min="8" max="72" step="0.5" value="13">
-            <div class="cob-style-buttons">
-              <button type="button" data-word-command="bold" title="Bold (Ctrl+B)" aria-label="Bold (Ctrl+B)"><b>B</b></button>
-              <button type="button" data-word-command="italic" title="Italic (Ctrl+I)" aria-label="Italic (Ctrl+I)"><i>I</i></button>
-              <button type="button" data-word-command="underline" title="Underline (Ctrl+U)" aria-label="Underline (Ctrl+U)"><u>U</u></button>
-              <label class="cob-ink-picker" title="Text colour (Ctrl+Alt+C)">A<input id="cobTextColor" type="color" value="#111111" aria-label="Text colour"></label>
-            </div>
-          </fieldset>
-          <fieldset><legend>Paragraph &amp; layout</legend>
-            <div class="cob-paragraph-buttons">
-              <button type="button" data-word-command="left" title="Align left (Ctrl+L)">≡ Left</button>
-              <button type="button" data-word-command="center" title="Centre (Ctrl+E)">≡ Centre</button>
-              <button type="button" data-word-command="right" title="Align right (Ctrl+R)">≡ Right</button>
-              <button type="button" data-word-command="justify" title="Justify (Ctrl+J)">☰ Justify</button>
-            </div>
-            <label for="cobLineSpacing">Line spacing</label><select id="cobLineSpacing"><option value="1">Single</option><option value="1.15" selected>1.15</option><option value="1.5">1.5</option><option value="2">Double</option></select>
-            <label for="cobSpaceAfter">After (pt)</label><input id="cobSpaceAfter" type="number" min="0" max="72" value="0">
-            <label for="cobFirstIndent">First line (pt)</label><input id="cobFirstIndent" type="number" min="-72" max="144" value="0">
-            <button type="button" data-word-command="paragraph" class="cob-tool-wide" title="New paragraph (Enter or Shift+Enter)">¶ New paragraph</button>
-          </fieldset>
-          <fieldset><legend>Tab stops</legend>
-            <label for="cobTabInterval">Interval (pt)</label><input id="cobTabInterval" type="number" min="6" max="144" value="36">
-            <label for="cobTabStops">Stops (pt)</label><input id="cobTabStops" placeholder="36, 72, 108" aria-describedby="cobTabHelp">
-            <small id="cobTabHelp">Comma-separated positions; empty uses the interval. Tab inserts a tab; Shift+Tab reduces indent.</small>
-            <button type="button" data-word-command="tab-stops">Apply stops</button><button type="button" data-word-command="tab">⇥ Insert tab</button>
-          </fieldset>
-          <div class="cob-history-buttons">
-            <button type="button" data-word-command="undo" title="Undo (Ctrl+Z)" disabled>↶ Undo</button>
-            <button type="button" data-word-command="redo" title="Redo (Ctrl+Y / Ctrl+Shift+Z)" disabled>↷ Redo</button>
-            <button type="button" data-word-command="marks" aria-pressed="false" title="Show paragraph marks">¶ Marks</button>
-            <button type="button" data-word-command="focus" aria-pressed="false" title="Expand document window">⛶ Expand</button>
-          </div>
-          <details class="cob-shortcuts"><summary>Keyboard shortcuts</summary><dl>
-            <dt>Ctrl+B / I / U</dt><dd>Bold / italic / underline</dd>
-            <dt>Ctrl+L / E / R / J</dt><dd>Left / centre / right / justify</dd>
-            <dt>Enter / Shift+Enter</dt><dd>New paragraph</dd>
-            <dt>Tab / Shift+Tab</dt><dd>Tab / reduce indent</dd>
-            <dt>Ctrl+M / Ctrl+Shift+M</dt><dd>Increase / reduce indent</dd>
-            <dt>Ctrl+1 / 2 / 5</dt><dd>Single / double / 1.5 spacing</dd>
-            <dt>Ctrl+Shift+&gt; / &lt;</dt><dd>Increase / reduce text size</dd>
-            <dt>Ctrl+Shift+F / P</dt><dd>Font / font size</dd>
-            <dt>Ctrl+Alt+C / T</dt><dd>Text colour / tab stops</dd>
-            <dt>Ctrl+Shift+L</dt><dd>Bullets</dd>
-            <dt>Ctrl+Shift+C / V</dt><dd>Copy / apply format</dd>
-            <dt>Ctrl+Z / Y / Shift+Z</dt><dd>Undo / redo</dd>
-            <dt>Ctrl+S / P</dt><dd>Save / print</dd>
-          </dl><small>On macOS, use Command in place of Ctrl.</small></details>`;
-        toolsPanel.querySelector('.cob-tools-grid').before(wordTools);
-        const zoomInput = statusBar.querySelector('#cobZoom');
-        zoomInput.addEventListener('input', function () {
-          paperStage.style.zoom = Number(zoomInput.value) / 100;
-          statusBar.querySelector('output').textContent = zoomInput.value + '%';
-          updateVisualTabs();
-        });
-
-        function cssPoints(value, baseSize) {
-          const raw = String(value || '').trim(), n = parseFloat(raw);
-          if (!Number.isFinite(n)) return 0;
-          if (/px$/i.test(raw)) return n * .75;
-          if (/mm$/i.test(raw)) return n * 72 / 25.4;
-          if (/cm$/i.test(raw)) return n * 72 / 2.54;
-          if (/in$/i.test(raw)) return n * 72;
-          if (/em$/i.test(raw)) return n * (baseSize || 13);
-          if (/%$/.test(raw)) return n * (baseSize || 13) / 100;
-          return n;
-        }
-        function inheritedStyle(node, property) {
-          let element = node.nodeType === 1 ? node : node.parentElement;
-          while (element && w.contains(element)) {
-            const value = getComputedStyle(element)[property];
-            if (value) return value;
-            if (element === w) break;
-            element = element.parentElement;
-          }
-          return '';
-        }
-        function decorationFor(node) {
-          const lines = new Set();
-          let element = node.nodeType === 1 ? node : node.parentElement;
-          while (element && w.contains(element)) {
-            const style = getComputedStyle(element);
-            String(style.textDecorationLine || style.textDecoration).split(/\s+/).forEach(function (part) {
-              if (part === 'underline' || part === 'line-through') lines.add(part);
-            });
-            if (element === w) break;
-            element = element.parentElement;
-          }
-          return Array.from(lines).join(' ') || 'none';
-        }
-        function currentEditorRange() {
-          rememberDraftRange();
-          const range = restoreDraftRange();
-          if (!range || !w.contains(range.commonAncestorContainer)) { setToolsStatus('पहिले दस्तावेजमा cursor राख्नुहोस् वा text छान्नुहोस्।'); return null; }
-          return range;
-        }
-        function selectRange(range) {
-          w.focus();
-          const selection = getSelection();
-          selection.removeAllRanges(); selection.addRange(range);
-          savedDraftRange = range.cloneRange();
-          rememberHistorySelection();
-        }
-        function textParts(range) {
-          const walker = document.createTreeWalker(w, NodeFilter.SHOW_TEXT), parts = [];
-          let node;
-          while ((node = walker.nextNode())) {
-            if (!node.length || node.parentElement.closest('[data-cob-list-marker],[contenteditable="false"]') || !range.intersectsNode(node)) continue;
-            const start = node === range.startContainer ? range.startOffset : 0, end = node === range.endContainer ? range.endOffset : node.length;
-            if (end > start) parts.push({node:node, start:start, end:end});
-          }
-          return parts;
-        }
-        function finishEditorCommand() { w.dispatchEvent(new Event('input', {bubbles:true})); }
-        function flattenDecorations(block) {
-          const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT), parts = [], originalElements = [block].concat(Array.from(block.querySelectorAll('*')));
-          let node;
-          while ((node = walker.nextNode())) if (node.length && !node.parentElement.closest('[contenteditable="false"]')) parts.push({node:node, decoration:decorationFor(node)});
-          parts.forEach(function (part) {
-            const span = document.createElement('span');
-            span.dataset.cobDecoration = '1';
-            span.style.textDecoration = part.decoration;
-            part.node.parentNode.insertBefore(span, part.node); span.appendChild(part.node);
-          });
-          originalElements.forEach(function (element) { element.style.textDecoration = 'none'; });
-        }
-        function applyInlineStyle(property, value) {
-          const range = currentEditorRange();
-          if (!range) return;
-          rememberHistorySelection();
-          if (range.collapsed) {
-            if (property === 'textDecoration' && value === 'none') {
-              const node = range.startContainer, offset = range.startOffset, block = draftBlockForNode(node);
-              if (block) { flattenDecorations(block); range.setStart(node, offset); range.collapse(true); }
-            }
-            const span = document.createElement('span');
-            span.dataset.cobTyping = '1'; span.style[property] = value;
-            span.textContent = '\u200b';
-            const node = range.startContainer;
-            if (property === 'textDecoration' && value === 'none' && node.nodeType === 3 && node.parentElement.dataset.cobDecoration) {
-              const parent = node.parentElement, before = parent.cloneNode(false), after = parent.cloneNode(false), tail = node.splitText(range.startOffset);
-              before.appendChild(node); after.appendChild(tail); parent.replaceWith(before, span, after);
-            } else range.insertNode(span);
-            const caret = document.createRange(); caret.setStart(span.firstChild, 1); caret.collapse(true); selectRange(caret);
-          } else {
-            const parts = textParts(range), spans = [];
-            if (property === 'textDecoration' && value === 'none') {
-              const start = range.startContainer, end = range.endContainer, startOffset = range.startOffset, endOffset = range.endOffset;
-              const blocks = new Set(parts.map(function (part) { return draftBlockForNode(part.node); }).filter(Boolean));
-              blocks.forEach(flattenDecorations);
-              range.setStart(start, startOffset); range.setEnd(end, endOffset);
-            }
-            textParts(range).reverse().forEach(function (part) {
-              if (part.end < part.node.length) part.node.splitText(part.end);
-              const selected = part.start ? part.node.splitText(part.start) : part.node;
-              const span = document.createElement('span'); span.style[property] = value;
-              if (property === 'textDecoration' && value === 'none' && selected.parentElement.dataset.cobDecoration) {
-                const parent = selected.parentElement, before = parent.cloneNode(false), after = parent.cloneNode(false);
-                while (parent.firstChild && parent.firstChild !== selected) before.appendChild(parent.firstChild);
-                span.style.textDecoration = parent.style.textDecoration.replace(/underline/g, '').trim() || 'none';
-                span.appendChild(selected); while (parent.firstChild) after.appendChild(parent.firstChild);
-                parent.replaceWith(before, span, after);
-              } else { selected.parentNode.insertBefore(span, selected); span.appendChild(selected); }
-              spans.unshift(span);
-            });
-            if (spans.length) { const selected = document.createRange(); selected.setStart(spans[0].firstChild, 0); selected.setEnd(spans[spans.length - 1].firstChild, spans[spans.length - 1].firstChild.length); selectRange(selected); }
-          }
-          finishEditorCommand();
-        }
-        function toggleInline(kind) {
-          const range = currentEditorRange(); if (!range) return;
-          const parts = range.collapsed ? [{node:range.startContainer}] : textParts(range);
-          const active = parts.length && parts.every(function (part) {
-            if (kind === 'bold') { const weight = inheritedStyle(part.node, 'fontWeight'); return Number(weight) >= 600 || weight === 'bold'; }
-            if (kind === 'italic') return inheritedStyle(part.node, 'fontStyle') === 'italic';
-            return decorationFor(part.node).includes('underline');
-          });
-          applyInlineStyle(kind === 'bold' ? 'fontWeight' : kind === 'italic' ? 'fontStyle' : 'textDecoration', kind === 'bold' ? (active ? '400' : '700') : kind === 'italic' ? (active ? 'normal' : 'italic') : (active ? 'none' : 'underline'));
-        }
-        function applyParagraphStyle(property, value) {
-          currentEditorRange(); const blocks = selectedDraftBlocks();
-          if (!blocks.length) { setToolsStatus('पहिले paragraph मा cursor राख्नुहोस्।'); return; }
-          blocks.forEach(function (block) { block.style[property] = value; block.dataset.docxP = '1'; if (property === 'textAlign') { block.style.setProperty('text-align', value, 'important'); block.dataset.align = value === 'justify' ? 'both' : value; } });
-          restoreDraftRange(); finishEditorCommand();
-        }
-        function caretAtStart(block) {
-          const range = document.createRange(), walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT);
-          let node;
-          while ((node = walker.nextNode())) if (!node.parentElement.closest('[contenteditable="false"]')) break;
-          if (node) range.setStart(node, 0); else range.setStart(block, listMarker(block) ? 1 : 0);
-          range.collapse(true); selectRange(range);
-        }
-        function insertParagraphBreak() {
-          const range = currentEditorRange(); if (!range) return;
-          const block = draftBlockForNode(range.startContainer), endBlock = draftBlockForNode(range.endContainer);
-          rememberHistorySelection(); range.deleteContents();
-          if (!block || !w.contains(block)) {
-            const paragraph = document.createElement('p'); paragraph.dataset.docxP = '1'; paragraph.innerHTML = '<br>';
-            range.insertNode(paragraph); caretAtStart(paragraph); finishEditorCommand(); return;
-          }
-          if (endBlock && endBlock !== block && endBlock.isConnected && endBlock.parentNode === block.parentNode) {
-            endBlock.querySelectorAll('[data-cob-list-marker]').forEach(function (marker) { marker.remove(); });
-            while (endBlock.firstChild) block.appendChild(endBlock.firstChild); endBlock.remove();
-          }
-          const mode = block.dataset.cobList;
-          const copy = block.cloneNode(true); copy.querySelectorAll('[data-cob-list-marker]').forEach(function (marker) { marker.remove(); });
-          if (mode && !copy.textContent.replace(/\u200b/g, '').trim()) { setBlockList(block, 'none'); caretAtStart(block); finishEditorCommand(); return; }
-          const tailRange = document.createRange(); tailRange.selectNodeContents(block); tailRange.setStart(range.startContainer, range.startOffset);
-          const tail = tailRange.extractContents(), next = block.cloneNode(false);
-          next.removeAttribute('id'); next.classList.remove('cob-blank'); next.dataset.docxP = '1';
-          tail.querySelectorAll('[data-cob-list-marker]').forEach(function (marker) { marker.remove(); });
-          if (block.matches('.cob-party,.cob-iti')) {
-            tail.querySelectorAll('.cob-party-leader,.cob-party-role,.cob-iti-leader').forEach(function (element) { block.appendChild(element); });
-            next.classList.remove('cob-party', 'cob-iti'); ['party','partyName','partyRole','iti','itiText'].forEach(function (key) { delete next.dataset[key]; });
-          }
-          if (mode) setBlockList(next, mode);
-          if (tail.childNodes.length) next.appendChild(tail); else next.appendChild(document.createElement('br'));
-          if (!block.childNodes.length) block.appendChild(document.createElement('br'));
-          block.after(next); if (mode === 'number') refreshNumbering(); caretAtStart(next); finishEditorCommand();
-        }
-        function tabStopsFor(block) {
-          try { const stops = JSON.parse(block.dataset.cobTabStops || '[]'); if (Array.isArray(stops) && stops.length) return stops; } catch (error) {}
-          const interval = Math.max(6, Math.min(144, Number(block.dataset.cobTabInterval) || 36)), stops = [];
-          for (let value = interval; value < 570; value += interval) stops.push(value);
-          return stops;
-        }
-        function updateVisualTabs() {
-          const zoom = Number(zoomInput.value) / 100, pageRect = w.getBoundingClientRect(), origin = pageRect.left + cssPoints(getComputedStyle(w).paddingLeft) / .75 * zoom;
-          w.querySelectorAll('[data-cob-tab-stop]').forEach(function (tab) {
-            const block = draftBlockForNode(tab); if (!block) return;
-            const range = document.createRange(); range.selectNodeContents(block); range.setEndBefore(tab);
-            const rects = typeof range.getClientRects === 'function' ? Array.from(range.getClientRects()) : [], last = rects[rects.length - 1];
-            const at = last ? Math.max(0, (last.right - origin) / zoom * .75) : Math.max(0, cssPoints(getComputedStyle(block).marginLeft) + cssPoints(getComputedStyle(block).textIndent) + range.toString().replace(/\t/g, '    ').length * 6.5);
-            const stops = tabStopsFor(block), interval = Number(block.dataset.cobTabInterval) || 36, target = stops.find(function (stop) { return stop > at + .5; }) || (Math.floor(at / interval) + 1) * interval;
-            tab.style.width = Math.max(1, target - at) + 'pt';
-          });
-        }
-        function insertEditorTab() {
-          const range = currentEditorRange(); if (!range) return;
-          rememberHistorySelection(); range.deleteContents();
-          const tab = document.createElement('span'); tab.dataset.cobTabStop = '1'; tab.className = 'cob-editor-tab'; tab.setAttribute('contenteditable', 'false'); tab.setAttribute('aria-label', 'Tab'); tab.textContent = '\t';
-          range.insertNode(tab); const caret = document.createRange(); caret.setStartAfter(tab); caret.collapse(true); selectRange(caret); finishEditorCommand();
-        }
-        function applyTabStops() {
-          const interval = Number(wordTools.querySelector('#cobTabInterval').value), raw = wordTools.querySelector('#cobTabStops').value.trim(), stops = raw ? raw.split(',').map(Number) : [];
-          if (!Number.isFinite(interval) || interval < 6 || interval > 144 || stops.some(function (point) { return !Number.isFinite(point) || point <= 0 || point > 570; })) { setToolsStatus('Interval 6–144 pt; tab stops 1–570 pt राख्नुहोस्।'); return; }
-          currentEditorRange(); const blocks = selectedDraftBlocks();
-          if (!blocks.length) { setToolsStatus('पहिले paragraph छान्नुहोस्।'); return; }
-          blocks.forEach(function (block) { block.dataset.cobTabInterval = String(interval); block.dataset.cobTabStops = JSON.stringify(Array.from(new Set(stops)).sort(function (a,b) { return a-b; })); });
-          finishEditorCommand(); setToolsStatus('Tab stops लागू भए।');
-        }
-        function nodePath(node) {
-          const path = []; while (node && node !== w) { if (!node.parentNode) return null; path.unshift(Array.prototype.indexOf.call(node.parentNode.childNodes, node)); node = node.parentNode; } return node === w ? path : null;
-        }
-        function historySelection() {
-          const selection = getSelection(); if (!selection || !selection.rangeCount) return null;
-          const range = selection.getRangeAt(0); if (!w.contains(range.commonAncestorContainer)) return null;
-          return { start:nodePath(range.startContainer), startOffset:range.startOffset, end:nodePath(range.endContainer), endOffset:range.endOffset };
-        }
-        function rememberHistorySelection() {
-          const state = editorHistory[editorHistoryIndex]; if (state && state.html === w.innerHTML && !restoringEditorHistory) { const selected = historySelection(); if (selected) state.selection = selected; }
-        }
-        function editorSnapshot() { return { html:w.innerHTML, fontSize:Number(w.dataset.cobFontSize || 13), selection:historySelection() }; }
-        function resetEditorHistory() { editorHistory = [editorSnapshot()]; editorHistoryIndex = 0; lastEditorInputAt = 0; lastEditorInputKind = ''; updateHistoryButtons(); }
-        function updateHistoryButtons() {
-          wordTools.querySelector('[data-word-command="undo"]').disabled = editorHistoryIndex <= 0;
-          wordTools.querySelector('[data-word-command="redo"]').disabled = editorHistoryIndex >= editorHistory.length - 1;
-        }
-        function recordEditorHistory(event) {
-          if (restoringEditorHistory) return;
-          const state = editorSnapshot(), previous = editorHistory[editorHistoryIndex];
-          if (previous && previous.html === state.html && previous.fontSize === state.fontSize) { rememberHistorySelection(); return; }
-          const kind = event && event.inputType || 'command', now = Date.now(), typing = ['insertText','deleteContentBackward','deleteContentForward'].includes(kind);
-          const coalesce = typing && kind === lastEditorInputKind && now - lastEditorInputAt < 900 && editorHistoryIndex > 0 && editorHistoryIndex === editorHistory.length - 1;
-          editorHistory = editorHistory.slice(0, editorHistoryIndex + 1);
-          if (coalesce) editorHistory[editorHistoryIndex] = state; else { editorHistory.push(state); editorHistoryIndex++; }
-          if (editorHistory.length > 80) { editorHistory.shift(); editorHistoryIndex--; }
-          lastEditorInputKind = kind; lastEditorInputAt = now; updateHistoryButtons();
-        }
-        function restoreHistorySelection(saved) {
-          if (!saved) { w.focus(); return; }
-          function resolve(path) { return path && path.reduce(function (node, index) { return node && node.childNodes[index]; }, w); }
-          const start = resolve(saved.start), end = resolve(saved.end); if (!start || !end) return;
-          const range = document.createRange(), max = function (node) { return node.nodeType === 3 ? node.length : node.childNodes.length; };
-          range.setStart(start, Math.min(saved.startOffset, max(start))); range.setEnd(end, Math.min(saved.endOffset, max(end))); selectRange(range);
-        }
-        function moveEditorHistory(delta) {
-          rememberHistorySelection(); const next = editorHistoryIndex + delta; if (next < 0 || next >= editorHistory.length) return;
-          restoringEditorHistory = true; editorHistoryIndex = next;
-          const state = editorHistory[next]; w.innerHTML = state.html; savedDraftRange = null; applyPreviewFontSize(state.fontSize, false); refreshNumbering(); restoreHistorySelection(state.selection); finishEditorCommand();
-          restoringEditorHistory = false; lastEditorInputKind = ''; lastEditorInputAt = 0; updateHistoryButtons();
-        }
-        function updateEditorStatus() {
-          const text = (w.textContent || '').replace(/\u200b/g, '').trim();
-          statusBar.querySelector('#cobWordCount').textContent = (text ? text.split(/\s+/).length : 0) + ' words';
-          const block = savedDraftRange && draftBlockForNode(savedDraftRange.startContainer), style = block && getComputedStyle(block);
-          statusBar.querySelector('#cobSelectionStatus').textContent = 'A4 · नेपाली' + (style ? ' · ' + (style.textAlign || 'justify') : '');
-          paperStage.dataset.cobPageLayout = w.dataset.cobPageLayout || 'order';
-          ['bold','italic','underline'].forEach(function (kind) {
-            const button = wordTools.querySelector('[data-word-command="' + kind + '"]'), node = savedDraftRange && savedDraftRange.startContainer;
-            const value = node ? (kind === 'bold' ? inheritedStyle(node, 'fontWeight') : kind === 'italic' ? inheritedStyle(node, 'fontStyle') : decorationFor(node)) : '';
-            button.setAttribute('aria-pressed', String(kind === 'bold' ? Number(value) >= 600 || value === 'bold' : kind === 'italic' ? value === 'italic' : value.includes('underline')));
-          });
-        }
-        function focusTool(id, picker) { setToolsOpen(true); const input = wordTools.querySelector('#' + id); input.focus(); if (picker) { try { typeof input.showPicker === 'function' ? input.showPicker() : input.click(); } catch (error) {} } }
-        function runWordCommand(command) {
-          if (['bold','italic','underline'].includes(command)) toggleInline(command);
-          else if (['left','center','right','justify'].includes(command)) applyParagraphStyle('textAlign', command);
-          else if (command === 'paragraph') insertParagraphBreak();
-          else if (command === 'tab') insertEditorTab();
-          else if (command === 'tab-stops') applyTabStops();
-          else if (command === 'undo') moveEditorHistory(-1);
-          else if (command === 'redo') moveEditorHistory(1);
-          else if (command === 'marks') { const show = w.classList.toggle('cob-show-marks'); wordTools.querySelector('[data-word-command="marks"]').setAttribute('aria-pressed', String(show)); }
-          else if (command === 'focus') { const expanded = b.classList.toggle('cob-expanded'); wordTools.querySelector('[data-word-command="focus"]').setAttribute('aria-pressed', String(expanded)); }
-          updateEditorStatus();
-        }
-        wordTools.querySelectorAll('button[data-word-command]').forEach(function (button) {
-          button.addEventListener('mousedown', function (event) { event.preventDefault(); });
-          button.addEventListener('click', function () { runWordCommand(button.dataset.wordCommand); });
-        });
-        wordTools.querySelector('#cobFontFamily').addEventListener('change', function (event) { applyInlineStyle('fontFamily', event.target.value); });
-        wordTools.querySelector('#cobSelectionSize').addEventListener('change', function (event) { const size = Math.max(8, Math.min(72, Number(event.target.value) || 13)); event.target.value = size; applyInlineStyle('fontSize', size + 'pt'); });
-        wordTools.querySelector('#cobTextColor').addEventListener('input', function (event) { applyInlineStyle('color', event.target.value); });
-        wordTools.querySelector('#cobLineSpacing').addEventListener('change', function (event) { applyParagraphStyle('lineHeight', event.target.value); });
-        wordTools.querySelector('#cobSpaceAfter').addEventListener('change', function (event) { applyParagraphStyle('marginBottom', Math.max(0, Math.min(72, Number(event.target.value) || 0)) + 'pt'); });
-        wordTools.querySelector('#cobFirstIndent').addEventListener('change', function (event) { applyParagraphStyle('textIndent', Math.max(-72, Math.min(144, Number(event.target.value) || 0)) + 'pt'); });
-        function handleEditorKeydown(event) {
-          if (event.isComposing || event.keyCode === 229) return;
-          const key = event.key.toLowerCase(), control = event.ctrlKey || event.metaKey;
-          if (event.key === 'Enter' && !event.altKey && !control) { event.preventDefault(); insertParagraphBreak(); return; }
-          if (event.key === 'Tab' && !event.altKey && !control) { event.preventDefault(); currentEditorRange(); if (event.shiftKey) applyParagraphTool('tab-remove'); else insertEditorTab(); return; }
-          if (!control) return;
-          let command = null;
-          if (!event.altKey && key === 'z') command = event.shiftKey ? 'redo' : 'undo';
-          else if (!event.altKey && !event.shiftKey && key === 'y') command = 'redo';
-          else if (!event.altKey && !event.shiftKey && ['b','i','u'].includes(key)) command = {b:'bold',i:'italic',u:'underline'}[key];
-          else if (!event.altKey && !event.shiftKey && ['l','e','r','j'].includes(key)) command = {l:'left',e:'center',r:'right',j:'justify'}[key];
-          if (command) { event.preventDefault(); runWordCommand(command); return; }
-          if (event.altKey && !event.shiftKey && (key === 'c' || key === 't')) { event.preventDefault(); focusTool(key === 'c' ? 'cobTextColor' : 'cobTabStops', key === 'c'); return; }
-          if (event.altKey) return;
-          if (key === 'm') { event.preventDefault(); currentEditorRange(); applyParagraphTool(event.shiftKey ? 'tab-remove' : 'tab-add'); return; }
-          if (!event.shiftKey && ['1','2','5'].includes(key)) { event.preventDefault(); applyParagraphStyle('lineHeight', {1:'1',2:'2',5:'1.5'}[key]); return; }
-          if (event.shiftKey && (key === 'f' || key === 'p')) { event.preventDefault(); focusTool(key === 'f' ? 'cobFontFamily' : 'cobSelectionSize'); return; }
-          if (event.shiftKey && ['>','<','.',','].includes(key)) { event.preventDefault(); const range = currentEditorRange(); if (range) { const size = cssPoints(inheritedStyle(range.startContainer, 'fontSize')) || Number(w.dataset.cobFontSize) || 13; applyInlineStyle('fontSize', Math.max(8, Math.min(72, size + (key === '>' || key === '.' ? 1 : -1))) + 'pt'); } return; }
-          if (event.shiftKey && key === 'l') { event.preventDefault(); currentEditorRange(); applyParagraphTool('bullet-add'); return; }
-          if (event.shiftKey && (key === 'c' || key === 'v' && copiedFormat)) { event.preventDefault(); currentEditorRange(); painter.querySelector(key === 'c' ? '#cobCopyFormat' : '#cobApplyFormat').click(); }
-        }
-        b.addEventListener('keydown', function (event) {
-          if ((!event.ctrlKey && !event.metaKey) || event.altKey || event.shiftKey || event.isComposing) return;
-          if (event.key.toLowerCase() === 's') { event.preventDefault(); N.click(); }
-          else if (event.key.toLowerCase() === 'p') { event.preventDefault(); b.querySelector('#cobPrint').click(); }
-        });
-        w.addEventListener('beforeinput', function (event) {
-          if (event.isComposing) return;
-          rememberDraftRange();
-          if (['insertParagraph','insertLineBreak'].includes(event.inputType)) { event.preventDefault(); insertParagraphBreak(); }
-          else if (event.inputType === 'historyUndo' || event.inputType === 'historyRedo') { event.preventDefault(); moveEditorHistory(event.inputType === 'historyUndo' ? -1 : 1); }
-          else if (['formatBold','formatItalic','formatUnderline'].includes(event.inputType)) { event.preventDefault(); toggleInline(event.inputType.replace('format','').toLowerCase()); }
-        });
-        w.addEventListener('input', function (event) { rememberDraftRange(); updateVisualTabs(); recordEditorHistory(event); updateEditorStatus(); });
-        w.addEventListener('keyup', updateEditorStatus);
-        w.addEventListener('mouseup', updateEditorStatus);
-        window.addEventListener('resize', updateVisualTabs);
-        toolsButton.setAttribute('aria-expanded', 'false');
-
         function setToolsOpen(open) {
           toolsPanel.hidden = !open;
           toolsButton.setAttribute("aria-expanded", String(open));
@@ -908,7 +523,7 @@
         document.addEventListener("selectionchange", rememberDraftRange);
         w.addEventListener("keyup", rememberDraftRange);
         w.addEventListener("mouseup", rememberDraftRange);
-        w.addEventListener("keydown", handleEditorKeydown);
+        w.addEventListener("keydown", continueBulletOnEnter);
         toolsButton.addEventListener("click", function () {
           setToolsOpen(toolsPanel.hidden);
         });
@@ -1585,9 +1200,6 @@
               (A += V("फैसला प्रमाणीकरण मिति-", { align: "left" }))),
             (w.innerHTML = A),
             (savedDraftRange = null),
-            (w.dataset.cobPageLayout = g.value === "फैसला" ? "judgment" : "order"),
-            resetEditorHistory(),
-            updateEditorStatus(),
             b.querySelector("#cobDraftWrap").classList.add("cob-show"),
             !1 !== e && w.focus());
         }
@@ -1758,51 +1370,53 @@
           );
         }
         function wordParagraphXml(element, contentNodes) {
+          const bodyParagraph = Boolean(element.closest(".cob-main-body,[data-cob-main-body='1']"));
           function colour(value) {
-            const raw = String(value || ''), hex = raw.match(/^#([a-f0-9]{6})$/i), rgb = raw.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?/);
-            if (hex) return hex[1];
-            if (!rgb || rgb[4] !== undefined && Number(rgb[4]) === 0) return null;
-            return rgb.slice(1,4).map(function (n) { return Number(n).toString(16).padStart(2,'0'); }).join('');
+            const rgb = String(value).match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+            return rgb ? rgb.slice(1).map(function (n) { return Number(n).toString(16).padStart(2, "0"); }).join("") : null;
           }
           function runs(node) {
             if (node.nodeType === 3) {
-              const text = String(node.nodeValue || '').replace(/\u200b/g, ''); if (!text) return '';
-              const parent = node.parentElement, style = getComputedStyle(parent), size = Math.max(2, Math.min(144, 2 * (cssPoints(inheritedStyle(parent,'fontSize')) || Number(w.dataset.cobFontSize) || 13))),
-                font = (inheritedStyle(parent,'fontFamily') || 'Kalimati').split(',')[0].replace(/["']/g,''), ink = colour(inheritedStyle(parent,'color')), fill = colour(style.backgroundColor), weight = inheritedStyle(parent,'fontWeight'), decoration = decorationFor(parent);
-              let props = '<w:rFonts w:ascii="' + s(font) + '" w:hAnsi="' + s(font) + '" w:eastAsia="' + s(font) + '" w:cs="' + s(font) + '"/><w:sz w:val="' + Math.round(size) + '"/><w:szCs w:val="' + Math.round(size) + '"/><w:lang w:val="ne-NP"/>';
-              if (Number(weight) >= 600 || weight === 'bold') props += '<w:b/><w:bCs/>';
-              if (inheritedStyle(parent,'fontStyle') === 'italic') props += '<w:i/><w:iCs/>';
-              if (decoration.includes('underline')) props += '<w:u w:val="single"/>';
-              if (decoration.includes('line-through')) props += '<w:strike/>';
+              const style = getComputedStyle(node.parentElement),
+                size = Math.max(2, Math.min(144, parseFloat(style.fontSize) * 1.5 || 26)),
+                font = style.fontFamily.split(",")[0].replace(/["']/g, ""),
+                ink = colour(style.color), fill = colour(style.backgroundColor);
+              let props = '<w:rFonts w:ascii="' + s(font) + '" w:hAnsi="' + s(font) + '" w:cs="' + s(font) + '"/><w:sz w:val="' + Math.round(size) + '"/><w:szCs w:val="' + Math.round(size) + '"/>';
+              if (Number(style.fontWeight) >= 600 || style.fontWeight === "bold") props += "<w:b/><w:bCs/>";
+              if (style.fontStyle === "italic") props += "<w:i/><w:iCs/>";
+              let decorated = node.parentElement;
+              while (decorated && w.contains(decorated)) {
+                const line = getComputedStyle(decorated).textDecorationLine;
+                if (line.includes("underline") && !props.includes("<w:u")) props += '<w:u w:val="single"/>';
+                if (line.includes("line-through") && !props.includes("<w:strike")) props += "<w:strike/>";
+                decorated = decorated.parentElement;
+              }
               if (ink) props += '<w:color w:val="' + ink + '"/>';
-              if (fill) props += '<w:shd w:fill="' + fill + '"/>';
-              if (style.verticalAlign === 'super' || parent.closest('sup')) props += '<w:vertAlign w:val="superscript"/>';
-              if (style.verticalAlign === 'sub' || parent.closest('sub')) props += '<w:vertAlign w:val="subscript"/>';
-              return '<w:r><w:rPr>' + props + '</w:rPr>' + text.replace(/\r\n?/g,'\n').split(/(\t|\n)/).map(function (part) {
-                return part === '\t' ? '<w:tab/>' : part === '\n' ? '<w:br/>' : '<w:t xml:space="preserve">' + s(part) + '</w:t>';
-              }).join('') + '</w:r>';
+              if (fill && style.backgroundColor !== "rgba(0, 0, 0, 0)") props += '<w:shd w:fill="' + fill + '"/>';
+              if (style.verticalAlign === "super" || node.parentElement.closest("sup")) props += '<w:vertAlign w:val="superscript"/>';
+              if (style.verticalAlign === "sub" || node.parentElement.closest("sub")) props += '<w:vertAlign w:val="subscript"/>';
+              return '<w:r><w:rPr>' + props + '</w:rPr>' + String(node.nodeValue || "").replace(/\r\n?/g, "\n").replace(bodyParagraph ? /[ \t]*\n[ \t]*/g : /$^/g, " ").split(/(\t|\n)/).map(function (part) {
+                return part === "\t" ? "<w:tab/>" : part === "\n" ? "<w:br/>" : '<w:t xml:space="preserve">' + s(part) + '</w:t>';
+              }).join("") + '</w:r>';
             }
-            if (node.nodeType !== 1) return '';
-            if (node.tagName === 'BR') return '<w:r><w:br/></w:r>';
-            if (node.matches('[data-cob-tab-stop],.cob-party-leader,.cob-iti-leader')) return '<w:r><w:tab/></w:r>';
-            return Array.from(node.childNodes).map(runs).join('');
+            if (node.nodeType !== 1) return "";
+            if (node.tagName === "BR") return bodyParagraph ? '<w:r><w:t xml:space="preserve"> </w:t></w:r>' : "<w:r><w:br/></w:r>";
+            if (node.matches(".cob-party-leader,.cob-iti-leader")) return "<w:r><w:tab/></w:r>";
+            return Array.from(node.childNodes).map(runs).join("");
           }
-          const style = getComputedStyle(element), fontSize = cssPoints(inheritedStyle(element,'fontSize')) || Number(w.dataset.cobFontSize) || 13,
-            align = style.textAlign === 'justify' ? 'both' : ['left','right','center'].includes(style.textAlign) ? style.textAlign : element.dataset.align || 'left',
-            lineHeight = String(style.lineHeight || '1.15'), line = Math.round((/^\d*\.?\d+$/.test(lineHeight) ? Number(lineHeight) : cssPoints(lineHeight,fontSize) / fontSize || 1.15) * 240),
-            left = Math.max(0,Math.round(cssPoints(style.marginLeft,fontSize) * 20 || Number(element.dataset.docxLeft || 0))),
-            right = Math.max(0,Math.round(cssPoints(style.marginRight,fontSize) * 20)), first = Math.round(cssPoints(style.textIndent,fontSize) * 20),
-            before = Math.max(0,Math.round(cssPoints(style.marginTop,fontSize) * 20)), after = Math.max(0,Math.round(cssPoints(style.marginBottom,fontSize) * 20)),
-            nodes = Array.from(contentNodes || element.childNodes), tabEntries = new Map(), leaders = element.querySelector('.cob-party-leader,.cob-iti-leader');
-          if (element.dataset.cobList === 'number') tabEntries.set(left, '<w:tab w:val="left" w:pos="' + left + '"/>');
-          if (!leaders && (element.querySelector('[data-cob-tab-stop]') || element.textContent.includes('\t') || element.dataset.cobTabStops)) {
-            tabStopsFor(element).forEach(function (point) { const pos = Math.round(point * 20); tabEntries.set(pos, '<w:tab w:val="left" w:pos="' + pos + '"/>'); });
-          }
-          if (leaders) { const pos = g.value === 'फैसला' ? 9224 : 9638; tabEntries.set(pos, '<w:tab w:val="right" w:leader="dot" w:pos="' + pos + '"/>'); }
-          const tabs = tabEntries.size ? '<w:tabs>' + Array.from(tabEntries.entries()).sort(function(a,b) { return a[0]-b[0]; }).map(function (entry) { return entry[1]; }).join('') + '</w:tabs>' : '',
-            indent = element.dataset.cobList === 'number' ? ' w:hanging="720"' : first < 0 ? ' w:hanging="' + Math.abs(first) + '"' : ' w:firstLine="' + first + '"';
-          if (nodes.length === 1 && nodes[0].nodeName === 'BR') nodes.pop();
-          return '<w:p><w:pPr>' + tabs + '<w:jc w:val="' + align + '"/><w:spacing w:line="' + Math.max(1,line) + '" w:lineRule="auto" w:before="' + before + '" w:after="' + after + '"/><w:ind w:left="' + left + '" w:right="' + right + '"' + indent + '/></w:pPr>' + nodes.map(runs).join('') + '</w:p>';
+          const style = getComputedStyle(element),
+            align = style.textAlign === "justify" ? "both" : ["left", "right", "center"].includes(style.textAlign) ? style.textAlign : "left",
+            line = Math.round((parseFloat(style.lineHeight) / parseFloat(style.fontSize) || 1.15) * 240),
+            left = Math.max(0, Number(element.dataset.docxLeft || 0)),
+            first = Math.round(parseFloat(style.textIndent) * 15 || 0),
+            tabs = element.dataset.cobList === "number" ? '<w:tabs><w:tab w:val="left" w:pos="' + left + '"/></w:tabs>' : element.querySelector(".cob-party-leader,.cob-iti-leader") ? '<w:tabs><w:tab w:val="right" w:leader="dot" w:pos="' + (g.value === "फैसला" ? 9224 : 9638) + '"/></w:tabs>' : "";
+          const before = Math.max(0, Math.round(parseFloat(style.marginTop) * 15 || 0)),
+            after = Math.max(0, Math.round(parseFloat(style.marginBottom) * 15 || 0)),
+            nodes = Array.from(contentNodes || element.childNodes);
+          // A lone BR is the browser placeholder for an empty paragraph.
+          // All other BRs, including consecutive/trailing breaks, are explicit.
+          if (nodes.length === 1 && nodes[0].nodeName === "BR") nodes.pop();
+          return '<w:p><w:pPr>' + tabs + '<w:jc w:val="' + align + '"/><w:spacing w:line="' + line + '" w:lineRule="auto" w:before="' + before + '" w:after="' + after + '"/><w:ind w:left="' + left + (element.dataset.cobList === "number" ? '" w:hanging="720' : '" w:firstLine="' + Math.max(0, first)) + '"/></w:pPr>' + nodes.map(runs).join("") + '</w:p>';
         }
         function draftDocxBlocks(root) {
           const blocks = [], blockSelector = "p,div,li,section,article,h1,h2,h3,h4,h5,h6,blockquote,pre,ul,ol";
@@ -1864,7 +1478,7 @@
               r(w.innerText || w.textContent) || oe(!1);
               try {
                 await navigator.clipboard.writeText(
-                  String(w.innerText || w.textContent).replace(/\u200b/g, ""),
+                  w.innerText || w.textContent,
                 );
               } catch (e) {
                 const t = document.createRange();
@@ -1880,7 +1494,6 @@
             r(w.innerText || w.textContent) || oe(!1);
             const e =
                 String(w.innerText || w.textContent || "")
-                  .replace(/\u200b/g, "")
                   .replace(/\u00a0/g, " ")
                   .replace(/\r\n?/g, "\n")
                   .trim() + "\n",
@@ -2002,7 +1615,7 @@
                     },
                     {
                       name: "word/settings.xml",
-                      data: '<?xml version="1.0" encoding="UTF-8"?><w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:defaultTabStop w:val="720"/><w:compat><w:doNotExpandShiftReturn/></w:compat></w:settings>',
+                      data: '<?xml version="1.0" encoding="UTF-8"?><w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:compat><w:doNotExpandShiftReturn/></w:compat></w:settings>',
                     },
                     {
                       name: "word/styles.xml",
@@ -2032,7 +1645,13 @@
               ),
               o = document.createElement("a");
             o.href = URL.createObjectURL(a);
-            ((o.download = draftDocxFileName()),
+            const c = _(T),
+              i = m(T.rawCase),
+              s =
+                (g.value || "आदेश") +
+                "-" +
+                i.caseNo.replace(/[\\/:*?"<>|]/g, "-");
+            ((o.download = (c.date && c.serial ? c.stem : s) + ".docx"),
               o.click(),
               te(b.querySelector("#cobDocx"), "Downloaded", !0),
               setTimeout(function () {
@@ -2249,10 +1868,7 @@
                               n && n.fontSize ? n.fontSize : 13,
                               !1,
                             ),
-                            resetEditorHistory(),
-                            updateEditorStatus(),
                             setToolsOpen(!1),
-                            setWordHandoffOpen(false),
                             ne(E),
                             n ? te(N, "Saved", !1) : ne(N),
                             (b.dataset.cobSyncKey = A),
