@@ -2869,7 +2869,7 @@
         const style = doc.createElement("link");
         style.id = "court-order-builder-style";
         style.rel = "stylesheet";
-        style.href = "cause-list-runtime.css?v=word-editor-1";
+        style.href = "cause-list-runtime.css?v=word-online-1";
         head.appendChild(style);
         const syncStyle = doc.createElement("link");
         syncStyle.id = "cause-list-firebase-sync-style";
@@ -2893,8 +2893,8 @@
         (doc.body || doc.documentElement).appendChild(dateLibrary);
         const runtime = doc.createElement("script");
         runtime.id = "court-order-builder-runtime";
-        runtime.setAttribute("data-version", "word-editor-1");
-        runtime.src = "cause-list-runtime.js?v=word-editor-1";
+        runtime.setAttribute("data-version", "word-online-1");
+        runtime.src = "cause-list-runtime.js?v=word-online-1";
         (doc.body || doc.documentElement).appendChild(runtime);
         const proofreaderRuntime = doc.createElement("script");
         proofreaderRuntime.id = "nepali-proofreader-engine-runtime";

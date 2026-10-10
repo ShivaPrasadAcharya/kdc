@@ -472,6 +472,49 @@
         ribbon.innerHTML = '<span class="cob-ribbon-label">Document</span>';
         b.querySelector('.cob-controls').before(ribbon);
         ribbon.appendChild(b.querySelector('.cob-actions'));
+        const wordOnlineUrl = 'https://word.cloud.microsoft/';
+        const wordOnlineButton = document.createElement('button');
+        wordOnlineButton.type = 'button';
+        wordOnlineButton.id = 'cobWordOnline';
+        wordOnlineButton.className = 'cob-btn cob-word-online-btn';
+        wordOnlineButton.title = 'Download this draft and open Microsoft Word Online';
+        wordOnlineButton.setAttribute('aria-label', 'Download this draft and open Microsoft Word Online in a new tab');
+        wordOnlineButton.setAttribute('aria-controls', 'cobWordHandoff');
+        wordOnlineButton.setAttribute('aria-expanded', 'false');
+        wordOnlineButton.innerHTML = '<span class="cob-online-word-mark" aria-hidden="true">W</span><span>Word Online</span><span aria-hidden="true">↗</span>';
+        b.querySelector('#cobDocx').after(wordOnlineButton);
+        const wordHandoff = document.createElement('section');
+        wordHandoff.id = 'cobWordHandoff';
+        wordHandoff.className = 'cob-word-handoff';
+        wordHandoff.hidden = true;
+        wordHandoff.setAttribute('aria-label', 'Word Online document handoff');
+        wordHandoff.innerHTML = '<div class="cob-word-handoff-head"><strong>Word Online</strong><button type="button" id="cobWordHandoffClose" aria-label="Word Online निर्देशन बन्द गर्नुहोस्">×</button></div><p role="status" aria-live="polite">डाउनलोड हुने फाइल: <strong id="cobWordFileName"></strong></p><p>Microsoft account बाट sign in गरी Word Online मा <b>Upload/open</b> मार्फत यो .docx फाइल खोल्नुहोस्। OneDrive मा <b>Add new → Files upload</b> बाट पनि खोल्न सकिन्छ।</p><p>सम्पादनपछि Word Online मा <b>File → Create a Copy → Download a copy</b> रोज्नुहोस्। तलको download बटनले KDC मा रहेको मस्यौदा डाउनलोड गर्छ।</p><div class="cob-word-handoff-actions"><button type="button" id="cobWordDownload">Download KDC draft (.docx)</button><a href="' + wordOnlineUrl + '" target="_blank" rel="noopener noreferrer">Open Word Online ↗</a><a href="https://onedrive.live.com/" target="_blank" rel="noopener noreferrer">OneDrive ↗</a></div>';
+        b.querySelector('.cob-controls').after(wordHandoff);
+        function draftDocxFileName() {
+          if (!T) return '';
+          const details = _(T), caseInfo = m(T.rawCase), fallback = (g.value || 'आदेश') + '-' + caseInfo.caseNo.replace(/[\\/:*?"<>|]/g, '-');
+          return (details.date && details.serial ? details.stem : fallback) + '.docx';
+        }
+        function setWordHandoffOpen(open) {
+          wordHandoff.hidden = !open;
+          wordOnlineButton.setAttribute('aria-expanded', String(open));
+          if (open) wordHandoff.querySelector('#cobWordFileName').textContent = draftDocxFileName();
+        }
+        wordOnlineButton.addEventListener('click', function () {
+          if (!T) return;
+          setWordHandoffOpen(true);
+          b.querySelector('#cobDocx').click();
+          window.open(wordOnlineUrl, '_blank', 'noopener,noreferrer');
+        });
+        wordHandoff.querySelector('#cobWordDownload').addEventListener('click', function () {
+          if (!T) return;
+          setWordHandoffOpen(true);
+          b.querySelector('#cobDocx').click();
+        });
+        wordHandoff.querySelector('#cobWordHandoffClose').addEventListener('click', function () {
+          setWordHandoffOpen(false);
+          wordOnlineButton.focus();
+        });
         b.querySelector('.cob-head h2').insertAdjacentHTML('afterbegin', '<span class="cob-word-mark" aria-hidden="true">W</span>');
         w.setAttribute('role', 'textbox');
         w.setAttribute('aria-label', 'आदेश/फैसला दस्तावेज सम्पादन');
@@ -1989,13 +2032,7 @@
               ),
               o = document.createElement("a");
             o.href = URL.createObjectURL(a);
-            const c = _(T),
-              i = m(T.rawCase),
-              s =
-                (g.value || "आदेश") +
-                "-" +
-                i.caseNo.replace(/[\\/:*?"<>|]/g, "-");
-            ((o.download = (c.date && c.serial ? c.stem : s) + ".docx"),
+            ((o.download = draftDocxFileName()),
               o.click(),
               te(b.querySelector("#cobDocx"), "Downloaded", !0),
               setTimeout(function () {
@@ -2215,6 +2252,7 @@
                             resetEditorHistory(),
                             updateEditorStatus(),
                             setToolsOpen(!1),
+                            setWordHandoffOpen(false),
                             ne(E),
                             n ? te(N, "Saved", !1) : ne(N),
                             (b.dataset.cobSyncKey = A),
